@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { VaultItemList } from "@/components/vault-item-list";
 import { getCampaignById } from "@/lib/actions";
 import { requireCampaignMember } from "@/lib/session";
-import { listCampaignTags, listVaultItems } from "@/lib/vault-actions";
+import { listCampaignTags, listActiveCampaignPlayers, listVaultItems } from "@/lib/vault-actions";
 
 export default async function VaultPage({
   params,
@@ -17,9 +17,10 @@ export default async function VaultPage({
   const campaign = await getCampaignById(id);
   if (!campaign) notFound();
 
-  const [tags, items] = await Promise.all([
+  const [tags, items, players] = await Promise.all([
     listCampaignTags(id),
     listVaultItems(id, session.user.id),
+    listActiveCampaignPlayers(id),
   ]);
 
   return (
@@ -34,15 +35,20 @@ export default async function VaultPage({
             Gear
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-ink-soft">
-            Campaign item calculator and shared vault. Builds and custom tags
-            stay with this table so everyone can use them.
+            Craftsman commissions or Tinker Unique Creation, assigned to a
+            creator player, with in-progress / finished tracking for the table.
           </p>
         </div>
 
         <CampaignNav campaignId={id} active="vault" />
 
         <section className="mt-8">
-          <ItemCostCalculator campaignId={id} campaignTags={tags} />
+          <ItemCostCalculator
+            campaignId={id}
+            campaignTags={tags}
+            players={players}
+            currentUserId={session.user.id}
+          />
         </section>
 
         <section className="mt-10">

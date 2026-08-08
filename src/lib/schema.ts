@@ -213,6 +213,19 @@ export const vaultItems = sqliteTable("vault_items", {
   totalWear: integer("total_wear").notNull(),
   selectedJson: text("selected_json").notNull(),
   snapshotJson: text("snapshot_json").notNull(),
+  crafterType: text("crafter_type", {
+    enum: ["craftsman", "tinker"],
+  })
+    .notNull()
+    .default("craftsman"),
+  status: text("status", {
+    enum: ["in_progress", "finished"],
+  })
+    .notNull()
+    .default("in_progress"),
+  creatorUserId: text("creator_user_id").references(() => user.id, {
+    onDelete: "set null",
+  }),
   copiedFromId: text("copied_from_id"),
   createdBy: text("created_by")
     .notNull()

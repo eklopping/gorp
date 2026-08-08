@@ -4,9 +4,14 @@ import { useState, useTransition } from "react";
 import {
   deleteVaultItemAction,
   saveVaultItemForSelfAction,
+  updateVaultItemStatusAction,
   type VaultItemSnapshot,
 } from "@/lib/vault-actions";
-import type { SelectedTag } from "@/lib/srr/types";
+import type {
+  CalculatorMode,
+  SelectedTag,
+  VaultItemStatus,
+} from "@/lib/srr/types";
 
 export type VaultItemView = {
   id: string;
@@ -17,6 +22,9 @@ export type VaultItemView = {
   selected: SelectedTag[];
   tagLabels: string[];
   snapshot: VaultItemSnapshot;
+  crafterType: CalculatorMode;
+  status: VaultItemStatus;
+  creatorUserId: string | null;
   createdAt: Date;
   createdBy: string;
   creatorName: string;
@@ -71,10 +79,26 @@ export function VaultItemList({
     });
   }
 
+  function setStatus(id: string, status: VaultItemStatus) {
+    setMessage(null);
+    setPendingId(id);
+    startTransition(async () => {
+      const result = await updateVaultItemStatusAction(campaignId, id, status);
+      setPendingId(null);
+      if ("error" in result && result.error) {
+        setMessage(result.error);
+        return;
+      }
+      setMessage(
+        status === "finished" ? "Marked finished." : "Marked in progress.",
+      );
+    });
+  }
+
   if (items.length === 0) {
     return (
       <p className="text-sm text-ink-soft">
-        No published items yet. Build one below and publish it for the table.
+        No published items yet. Build one above and publish it for the table.
       </p>
     );
   }
@@ -85,7 +109,12 @@ export function VaultItemList({
       <ul className="space-y-3">
         {items.map((item) => {
           const canDelete = isGm || item.createdBy === currentUserId;
+          const canStatus =
+            isGm ||
+            item.createdBy === currentUserId ||
+            item.creatorUserId === currentUserId;
           const busy = pending && pendingId === item.id;
+          const isTinker = item.crafterType === "tinker";
           return (
             <li
               key={item.id}
@@ -93,12 +122,26 @@ export function VaultItemList({
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h3 className="font-[family-name:var(--font-display)] text-xl">
-                    {item.name}
-                  </h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-[family-name:var(--font-display)] text-xl">
+                      {item.name}
+                    </h3>
+                    <span
+                      className={`rounded-md px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] ${
+                        item.status === "finished"
+                          ? "bg-accent/15 text-accent-deep"
+                          : "border border-line text-ink-soft"
+                      }`}
+                    >
+                      {item.status === "finished" ? "Finished" : "In progress"}
+                    </span>
+                    <span className="rounded-md border border-line px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-ink-soft">
+                      {isTinker ? "Tinker" : "Craftsman"}
+                    </span>
+                  </div>
                   <p className="mt-0.5 text-xs text-ink-soft">
-                    {item.snapshot.profileName} · Wear {item.totalWear} · by{" "}
-                    {item.creatorName}
+                    {item.snapshot.profileName} · Wear {item.totalWear} ·
+                    creator {item.creatorName}
                     {item.copiedFromId ? " · personal copy" : ""}
                   </p>
                   {item.notes ? (
@@ -106,6 +149,25 @@ export function VaultItemList({
                   ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  {canStatus ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() =>
+                        setStatus(
+                          item.id,
+                          item.status === "finished"
+                            ? "in_progress"
+                            : "finished",
+                        )
+                      }
+                      className="rounded-lg border border-line px-3 py-1.5 text-xs hover:border-accent disabled:opacity-50"
+                    >
+                      {item.status === "finished"
+                        ? "Mark in progress"
+                        : "Mark finished"}
+                    </button>
+                  ) : null}
                   {!item.copiedFromId && item.createdBy !== currentUserId ? (
                     <button
                       type="button"
@@ -133,19 +195,41 @@ export function VaultItemList({
                 </div>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <MiniStat
-                  label="Market"
-                  value={`${item.snapshot.marketValue}c`}
-                />
-                <MiniStat label="Load" value={`${item.snapshot.load}`} />
-                <MiniStat
-                  label="Resource"
-                  value={`${item.snapshot.tinkerResource}`}
-                />
-                <MiniStat
-                  label="UC clock"
-                  value={`${item.snapshot.tinkerSegments}s / ${item.snapshot.tinkerBp}BP`}
-                />
+                {isTinker ? (
+                  <>
+                    <MiniStat
+                      label="Resource"
+                      value={`${item.snapshot.tinkerResource}`}
+                    />
+                    <MiniStat
+                      label="UC clock"
+                      value={`${item.snapshot.tinkerSegments}s / ${item.snapshot.tinkerBp}BP`}
+                    />
+                    <MiniStat
+                      label="Market"
+                      value={`${item.snapshot.marketValue}c`}
+                    />
+                    <MiniStat label="Load" value={`${item.snapshot.load}`} />
+                  </>
+                ) : (
+                  <>
+                    <MiniStat
+                      label="Commission"
+                      value={`${item.snapshot.craftsmanCost}c`}
+                    />
+                    <MiniStat
+                      label="Market"
+                      value={`${item.snapshot.marketValue}c`}
+                    />
+                    <MiniStat label="Load" value={`${item.snapshot.load}`} />
+                    <MiniStat
+                      label="Progress"
+                      value={
+                        item.status === "finished" ? "Finished" : "In progress"
+                      }
+                    />
+                  </>
+                )}
               </div>
               {item.tagLabels.length > 0 ? (
                 <p className="mt-3 text-xs text-ink-soft">

@@ -9,10 +9,12 @@ import {
   mergeTagRepos,
 } from "@/lib/srr/calculator";
 import type {
+  CalculatorMode,
   ItemSlot,
   SelectedTag,
   TagDefinition,
   TagType,
+  VaultItemStatus,
 } from "@/lib/srr/types";
 import {
   publishVaultItemAction,
@@ -21,6 +23,12 @@ import {
 
 const CUSTOM_KEY = "gorp-srr-custom-tags";
 const BUILD_KEY = "gorp-srr-last-build";
+
+export type CampaignPlayerOption = {
+  userId: string;
+  name: string;
+  role: "gm" | "player";
+};
 
 const ALL_TYPES: TagType[] = [
   "B",
@@ -61,11 +69,15 @@ function loadCustomTags(): TagDefinition[] {
 type Props = {
   campaignId: string;
   campaignTags?: TagDefinition[];
+  players: CampaignPlayerOption[];
+  currentUserId: string;
 };
 
 export function ItemCostCalculator({
   campaignId,
   campaignTags = [],
+  players,
+  currentUserId,
 }: Props) {
   const [customTags, setCustomTags] = useState<TagDefinition[]>([]);
   const [sharedTags, setSharedTags] = useState<TagDefinition[]>(campaignTags);
@@ -75,6 +87,9 @@ export function ItemCostCalculator({
   const [filter, setFilter] = useState("");
   const [uniqueSeg, setUniqueSeg] = useState(1);
   const [uniqueBp, setUniqueBp] = useState(1);
+  const [crafterType, setCrafterType] = useState<CalculatorMode>("craftsman");
+  const [status, setStatus] = useState<VaultItemStatus>("in_progress");
+  const [creatorUserId, setCreatorUserId] = useState(currentUserId);
   const [itemName, setItemName] = useState("");
   const [itemNotes, setItemNotes] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -93,6 +108,12 @@ export function ItemCostCalculator({
   }, [campaignTags]);
 
   useEffect(() => {
+    if (!players.some((player) => player.userId === creatorUserId)) {
+      setCreatorUserId(currentUserId);
+    }
+  }, [players, creatorUserId, currentUserId]);
+
+  useEffect(() => {
     setCustomTags(loadCustomTags());
     try {
       const raw = localStorage.getItem(BUILD_KEY);
@@ -101,10 +122,14 @@ export function ItemCostCalculator({
         profileId: string;
         totalWear: number;
         selected: SelectedTag[];
+        crafterType?: CalculatorMode;
       };
       if (saved.profileId) setProfileId(saved.profileId);
       if (saved.totalWear) setTotalWear(saved.totalWear);
       if (saved.selected) setSelected(saved.selected);
+      if (saved.crafterType === "craftsman" || saved.crafterType === "tinker") {
+        setCrafterType(saved.crafterType);
+      }
     } catch {
       /* ignore */
     }
@@ -113,9 +138,9 @@ export function ItemCostCalculator({
   useEffect(() => {
     localStorage.setItem(
       BUILD_KEY,
-      JSON.stringify({ profileId, totalWear, selected }),
+      JSON.stringify({ profileId, totalWear, selected, crafterType }),
     );
-  }, [profileId, totalWear, selected]);
+  }, [profileId, totalWear, selected, crafterType]);
 
   const repo = useMemo(
     () => mergeTagRepos([...sharedTags, ...customTags]),
@@ -151,10 +176,11 @@ export function ItemCostCalculator({
         totalWear,
         selected,
         tags: repo,
+        crafterType,
         customUniqueSegments: uniqueSeg,
         customUniqueBp: uniqueBp,
       }),
-    [profileId, totalWear, selected, repo, uniqueSeg, uniqueBp],
+    [profileId, totalWear, selected, repo, crafterType, uniqueSeg, uniqueBp],
   );
 
   const compatibleTags = useMemo(
@@ -247,6 +273,9 @@ export function ItemCostCalculator({
         totalWear,
         selected,
         customTags,
+        crafterType,
+        status,
+        creatorUserId,
       });
       if ("error" in publishResult && publishResult.error) {
         setMessage(publishResult.error);
@@ -266,11 +295,78 @@ export function ItemCostCalculator({
             Build item
           </h2>
           <p className="mt-1 text-sm text-ink-soft">
-            SRR Vol.3 item creation value + Vol.1 Tinker Unique Creation resource
-            / clock. Custom tags share to this campaign; publish builds to the
+            Choose a craftsman (coin commission) or Tinker (Unique Creation
+            resource/clock). Assign the creator player and mark progress for the
             vault.
           </p>
         </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <p className="text-sm font-medium">Crafter</p>
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {(
+                [
+                  ["craftsman", "Craftsman"],
+                  ["tinker", "Tinker"],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setCrafterType(value)}
+                  className={`rounded-lg px-3 py-1.5 text-sm ${
+                    crafterType === value
+                      ? "bg-accent text-paper"
+                      : "border border-line text-ink-soft hover:border-accent"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-sm font-medium">Progress</p>
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {(
+                [
+                  ["in_progress", "In progress"],
+                  ["finished", "Finished"],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setStatus(value)}
+                  className={`rounded-lg px-3 py-1.5 text-sm ${
+                    status === value
+                      ? "bg-accent text-paper"
+                      : "border border-line text-ink-soft hover:border-accent"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <label className="block text-sm">
+          <span className="font-medium">Creator player</span>
+          <select
+            value={creatorUserId}
+            onChange={(event) => setCreatorUserId(event.target.value)}
+            className="mt-1.5 w-full rounded-lg border border-line bg-paper-deep/40 px-3 py-2"
+          >
+            {players.map((player) => (
+              <option key={player.userId} value={player.userId}>
+                {player.name}
+                {player.role === "gm" ? " (GM)" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
 
         <div className="space-y-3 rounded-xl border border-dashed border-line p-3">
           <label className="block text-sm">
@@ -294,7 +390,7 @@ export function ItemCostCalculator({
           </label>
           <button
             type="button"
-            disabled={publishing || !itemName.trim()}
+            disabled={publishing || !itemName.trim() || !creatorUserId}
             onClick={publishToVault}
             className="rounded-lg bg-accent px-3 py-2 text-sm text-paper hover:bg-accent-deep disabled:opacity-50"
           >
@@ -395,7 +491,9 @@ export function ItemCostCalculator({
         <div className="rounded-xl border border-dashed border-line p-3">
           <h3 className="font-medium">Add custom Unique tag costs</h3>
           <p className="text-xs text-ink-soft">
-            For Tinker Unique tags, GM sets segments/BP.
+            {crafterType === "tinker"
+              ? "For Tinker Unique tags, GM sets segments/BP."
+              : "Unique tags are Tinker-only; switch crafter to Tinker to use this clock."}
           </p>
           <div className="mt-2 flex flex-wrap gap-3">
             <label className="text-xs">
@@ -404,8 +502,9 @@ export function ItemCostCalculator({
                 type="number"
                 min={1}
                 value={uniqueSeg}
+                disabled={crafterType !== "tinker"}
                 onChange={(event) => setUniqueSeg(Number(event.target.value))}
-                className="ml-2 w-16 rounded border border-line px-2 py-1"
+                className="ml-2 w-16 rounded border border-line px-2 py-1 disabled:opacity-50"
               />
             </label>
             <label className="text-xs">
@@ -414,8 +513,9 @@ export function ItemCostCalculator({
                 type="number"
                 min={1}
                 value={uniqueBp}
+                disabled={crafterType !== "tinker"}
                 onChange={(event) => setUniqueBp(Number(event.target.value))}
-                className="ml-2 w-16 rounded border border-line px-2 py-1"
+                className="ml-2 w-16 rounded border border-line px-2 py-1 disabled:opacity-50"
               />
             </label>
           </div>
@@ -427,14 +527,39 @@ export function ItemCostCalculator({
           <h2 className="font-[family-name:var(--font-display)] text-2xl">
             Results
           </h2>
+          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-ink-soft">
+            {crafterType === "craftsman"
+              ? "Craftsman commission"
+              : "Tinker Unique Creation"}
+          </p>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Stat label="Market Value" value={`${result.marketValue}c`} />
-            <Stat label="Load" value={`${result.load}`} />
-            <Stat label="Tinker Resource" value={`${result.tinkerResource}`} />
-            <Stat
-              label="UC Clock"
-              value={`${result.tinkerSegments} seg / ${result.tinkerBp} BP`}
-            />
+            {crafterType === "craftsman" ? (
+              <>
+                <Stat
+                  label="Commission (~2×)"
+                  value={`${result.craftsmanCost}c`}
+                />
+                <Stat label="Market value" value={`${result.marketValue}c`} />
+                <Stat label="Load" value={`${result.load}`} />
+                <Stat
+                  label="Status"
+                  value={status === "finished" ? "Finished" : "In progress"}
+                />
+              </>
+            ) : (
+              <>
+                <Stat
+                  label="Tinker Resource"
+                  value={`${result.tinkerResource}`}
+                />
+                <Stat
+                  label="UC Clock"
+                  value={`${result.tinkerSegments} seg / ${result.tinkerBp} BP`}
+                />
+                <Stat label="Load" value={`${result.load}`} />
+                <Stat label="Market value" value={`${result.marketValue}c`} />
+              </>
+            )}
           </div>
           {result.warnings.length > 0 ? (
             <ul className="mt-3 space-y-1 text-sm text-warn">
@@ -464,8 +589,9 @@ export function ItemCostCalculator({
             ))}
           </ul>
           <p className="mt-3 text-xs text-ink-soft">
-            Market buy custom: often ~2× value. Stock goods cheaper. Resource
-            usually 2c each when converting coin→resource.
+            {crafterType === "craftsman"
+              ? "Custom craftsman work is typically ~2× market value. Stock goods are cheaper."
+              : "Pay the Unique Creation Resource and fill the clock (segments × BP). Resource often converts at ~2c each."}
           </p>
         </div>
 

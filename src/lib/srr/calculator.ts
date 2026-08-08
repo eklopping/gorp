@@ -1,6 +1,7 @@
 import { ITEM_PROFILES } from "@/data/srr/profiles";
 import { BUILTIN_TAGS, baseTagCoin } from "@/data/srr/tags";
 import type {
+  CalculatorMode,
   ItemProfile,
   SelectedTag,
   TagDefinition,
@@ -74,6 +75,7 @@ export type CalcInput = {
   totalWear: number;
   selected: SelectedTag[];
   tags: TagDefinition[];
+  crafterType?: CalculatorMode;
   customUniqueSegments?: number;
   customUniqueBp?: number;
 };
@@ -92,6 +94,8 @@ export type CalcResult = {
   addedWear: number;
   load: number;
   marketValue: number;
+  /** Custom craftsman commission — typically ~2× market value (SRR). */
+  craftsmanCost: number;
   tagSlotsUsed: number;
   tagSlotsMax: number;
   negativeSlotsUsed: number;
@@ -99,11 +103,13 @@ export type CalcResult = {
   tinkerResource: number;
   tinkerSegments: number;
   tinkerBp: number;
+  crafterType: CalculatorMode;
   warnings: string[];
   lines: CalcBreakdownLine[];
 };
 
 export function calculateItem(input: CalcInput): CalcResult {
+  const crafterType: CalculatorMode = input.crafterType ?? "craftsman";
   const profile =
     ITEM_PROFILES.find((row) => row.id === input.profileId) ?? ITEM_PROFILES[0];
   const totalWear = Math.max(
@@ -122,6 +128,8 @@ export function calculateItem(input: CalcInput): CalcResult {
   let ingredientOrMagicCount = 0;
   let segments = profile.startingWear + Math.ceil(addedWear / 2);
   let countedBpFromTags = 0;
+  let hasUniqueOrLegendary = false;
+  let hasCraftsmanTag = false;
 
   lines.push({
     label: `Profile: ${profile.name}`,
@@ -177,6 +185,8 @@ export function calculateItem(input: CalcInput): CalcResult {
     const isMagic = tag.types.includes("M");
     const isLegendary = tag.types.includes("Legendary");
     const isUnique = tag.types.includes("Unique");
+    if (isLegendary || isUnique) hasUniqueOrLegendary = true;
+    if (isCraft) hasCraftsmanTag = true;
 
     if (isLegendary) {
       segments += 20 * stacks;
@@ -254,8 +264,25 @@ export function calculateItem(input: CalcInput): CalcResult {
   const tagSlotsUsed = positiveCount;
   const overLimitTags = Math.max(0, tagSlotsUsed - tagSlotsMax);
   if (overLimitTags > 0) {
+    if (crafterType === "tinker") {
+      warnings.push(
+        `${overLimitTags} tag(s) over Wear limit — Unique Creation adds +5 Resource & +1 BP each.`,
+      );
+    } else {
+      warnings.push(
+        `${overLimitTags} tag(s) over Wear limit — a regular craftsman usually cannot exceed Wear tag caps; use a Tinker.`,
+      );
+    }
+  }
+
+  if (crafterType === "craftsman" && hasUniqueOrLegendary) {
     warnings.push(
-      `${overLimitTags} tag(s) over Wear limit — valid for Tinker Unique Creation (+5 Resource & +1 BP each).`,
+      "Unique/Legendary tags are Tinker work — a regular craftsman cannot finish this build.",
+    );
+  }
+  if (crafterType === "tinker" && hasCraftsmanTag) {
+    warnings.push(
+      "Craftsman [C] tags still apply; Unique Creation pays their Resource/clock cost.",
     );
   }
 
@@ -268,7 +295,7 @@ export function calculateItem(input: CalcInput): CalcResult {
   });
 
   const marketValue = profile.coin + tagCoins + wearCoins;
-  // Negatives already negative in tagCoins
+  const craftsmanCost = marketValue * 2;
 
   const minLoad = profile.minLoad ?? 1;
   let load = Math.ceil(totalWear / 2) + loadMod;
@@ -278,7 +305,6 @@ export function calculateItem(input: CalcInput): CalcResult {
     load = Math.max(0, Math.min(2, load));
   }
 
-  // Tinker resource
   const resource =
     halfMin1(profile.startingWear) +
     halfMin1(addedWear) +
@@ -286,15 +312,30 @@ export function calculateItem(input: CalcInput): CalcResult {
     ingredientOrMagicCount * 2 +
     overLimitTags * 5;
 
-  lines.push({
-    label: "Tinker Resource (Unique Creation)",
-    resource,
-  });
-  lines.push({
-    label: "Tinker Clock",
-    segments,
-    bp,
-  });
+  if (crafterType === "craftsman") {
+    lines.push({
+      label: "Market value (stock reference)",
+      coins: marketValue,
+    });
+    lines.push({
+      label: "Craftsman custom commission (~2× value)",
+      coins: craftsmanCost,
+    });
+  } else {
+    lines.push({
+      label: "Tinker Resource (Unique Creation)",
+      resource,
+    });
+    lines.push({
+      label: "Tinker Clock",
+      segments,
+      bp,
+    });
+    lines.push({
+      label: "Market value (if sold later)",
+      coins: marketValue,
+    });
+  }
 
   return {
     profile,
@@ -302,6 +343,7 @@ export function calculateItem(input: CalcInput): CalcResult {
     addedWear,
     load,
     marketValue,
+    craftsmanCost,
     tagSlotsUsed,
     tagSlotsMax,
     negativeSlotsUsed,
@@ -309,6 +351,7 @@ export function calculateItem(input: CalcInput): CalcResult {
     tinkerResource: resource,
     tinkerSegments: segments,
     tinkerBp: bp,
+    crafterType,
     warnings,
     lines,
   };

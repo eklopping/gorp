@@ -68,4 +68,5 @@ export type SelectedTag = {
   stacks: number;
 };
 
-export type CalculatorMode = "market" | "tinker";
+export type CalculatorMode = "craftsman" | "tinker";
+export type VaultItemStatus = "in_progress" | "finished";
