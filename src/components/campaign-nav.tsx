@@ -3,6 +3,7 @@ import Link from "next/link";
 const links = [
   { suffix: "", label: "Sessions", key: "sessions" },
   { suffix: "/fate", label: "Fate", key: "fate" },
+  { suffix: "/vault", label: "Vault", key: "vault" },
   { suffix: "/entities", label: "ID cards", key: "entities" },
   { suffix: "/maps", label: "Maps", key: "maps" },
   { suffix: "/members", label: "Members", key: "members" },
@@ -13,7 +14,7 @@ export function CampaignNav({
   active,
 }: {
   campaignId: string;
-  active: "sessions" | "fate" | "entities" | "maps" | "members";
+  active: "sessions" | "fate" | "vault" | "entities" | "maps" | "members";
 }) {
   return (
     <nav className="mt-5 flex flex-wrap gap-2">

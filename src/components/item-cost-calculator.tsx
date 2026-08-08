@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { ITEM_PROFILES } from "@/data/srr/profiles";
 import { BUILTIN_TAGS } from "@/data/srr/tags";
 import {
@@ -14,6 +14,10 @@ import type {
   TagDefinition,
   TagType,
 } from "@/lib/srr/types";
+import {
+  publishVaultItemAction,
+  upsertCampaignTagAction,
+} from "@/lib/vault-actions";
 
 const CUSTOM_KEY = "gorp-srr-custom-tags";
 const BUILD_KEY = "gorp-srr-last-build";
@@ -54,14 +58,27 @@ function loadCustomTags(): TagDefinition[] {
   }
 }
 
-export function ItemCostCalculator() {
+type Props = {
+  campaignId?: string;
+  campaignTags?: TagDefinition[];
+};
+
+export function ItemCostCalculator({
+  campaignId,
+  campaignTags = [],
+}: Props) {
   const [customTags, setCustomTags] = useState<TagDefinition[]>([]);
+  const [sharedTags, setSharedTags] = useState<TagDefinition[]>(campaignTags);
   const [profileId, setProfileId] = useState(ITEM_PROFILES[0].id);
   const [totalWear, setTotalWear] = useState(ITEM_PROFILES[0].startingWear);
   const [selected, setSelected] = useState<SelectedTag[]>([]);
   const [filter, setFilter] = useState("");
   const [uniqueSeg, setUniqueSeg] = useState(1);
   const [uniqueBp, setUniqueBp] = useState(1);
+  const [itemName, setItemName] = useState("");
+  const [itemNotes, setItemNotes] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
 
   // New custom tag form
   const [newName, setNewName] = useState("");
@@ -71,6 +88,9 @@ export function ItemCostCalculator() {
   const [newLoad, setNewLoad] = useState(0);
   const [newSlots, setNewSlots] = useState<ItemSlot[]>([]);
 
+  useEffect(() => {
+    setSharedTags(campaignTags);
+  }, [campaignTags]);
 
   useEffect(() => {
     setCustomTags(loadCustomTags());
@@ -97,7 +117,10 @@ export function ItemCostCalculator() {
     );
   }, [profileId, totalWear, selected]);
 
-  const repo = useMemo(() => mergeTagRepos(customTags), [customTags]);
+  const repo = useMemo(
+    () => mergeTagRepos([...sharedTags, ...customTags]),
+    [sharedTags, customTags],
+  );
   const profile = ITEM_PROFILES.find((row) => row.id === profileId)!;
 
   useEffect(() => {
@@ -198,6 +221,43 @@ export function ItemCostCalculator() {
     setNewLoad(0);
     setNewSlots([]);
     addTag(id);
+
+    if (campaignId) {
+      startTransition(async () => {
+        const result = await upsertCampaignTagAction(campaignId, tag);
+        if ("error" in result && result.error) {
+          setMessage(result.error);
+          return;
+        }
+        setSharedTags((prev) => [
+          ...prev.filter((row) => row.id !== tag.id),
+          { ...tag, custom: true },
+        ]);
+        setMessage(`Shared “${tag.name}” with the campaign vault.`);
+      });
+    }
+  }
+
+  function publishToVault() {
+    if (!campaignId) return;
+    setMessage(null);
+    startTransition(async () => {
+      const result = await publishVaultItemAction(campaignId, {
+        name: itemName,
+        notes: itemNotes,
+        profileId,
+        totalWear,
+        selected,
+        customTags,
+      });
+      if ("error" in result && result.error) {
+        setMessage(result.error);
+        return;
+      }
+      setMessage(`Published “${itemName.trim()}” to the campaign vault.`);
+      setItemName("");
+      setItemNotes("");
+    });
   }
 
   return (
@@ -209,9 +269,47 @@ export function ItemCostCalculator() {
           </h2>
           <p className="mt-1 text-sm text-ink-soft">
             SRR Vol.3 item creation value + Vol.1 Tinker Unique Creation resource
-            / clock. Custom tags save in this browser.
+            / clock.
+            {campaignId
+              ? " Custom tags can be shared to this campaign; publish builds to the vault."
+              : " Custom tags save in this browser."}
           </p>
         </div>
+
+        {campaignId ? (
+          <div className="space-y-3 rounded-xl border border-dashed border-line p-3">
+            <label className="block text-sm">
+              <span className="font-medium">Item name</span>
+              <input
+                value={itemName}
+                onChange={(event) => setItemName(event.target.value)}
+                placeholder="e.g. Emberpike"
+                className="mt-1.5 w-full rounded-lg border border-line bg-paper-deep/40 px-3 py-2"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="font-medium">Notes (optional)</span>
+              <textarea
+                value={itemNotes}
+                onChange={(event) => setItemNotes(event.target.value)}
+                rows={2}
+                placeholder="Origin, quirks, who found it…"
+                className="mt-1.5 w-full rounded-lg border border-line bg-paper-deep/40 px-3 py-2"
+              />
+            </label>
+            <button
+              type="button"
+              disabled={pending || !itemName.trim()}
+              onClick={publishToVault}
+              className="rounded-lg bg-accent px-3 py-2 text-sm text-paper hover:bg-accent-deep disabled:opacity-50"
+            >
+              {pending ? "Publishing…" : "Publish to campaign vault"}
+            </button>
+            {message ? (
+              <p className="text-xs text-ink-soft">{message}</p>
+            ) : null}
+          </div>
+        ) : null}
 
         <label className="block text-sm">
           <span className="font-medium">Item profile</span>
@@ -522,11 +620,15 @@ export function ItemCostCalculator() {
                 onClick={createCustomTag}
                 className="rounded-lg bg-accent px-3 py-2 text-sm text-paper hover:bg-accent-deep"
               >
-                Save tag to repository
+                {campaignId
+                  ? "Save tag locally & share to campaign"
+                  : "Save tag to repository"}
               </button>
               <p className="text-[11px] text-ink-soft">
-                Built-in seed: {BUILTIN_TAGS.length} tags. Customs stay local to
-                this browser unless we later sync them to a campaign.
+                Built-in seed: {BUILTIN_TAGS.length} tags.
+                {campaignId
+                  ? ` Campaign vault has ${sharedTags.length} shared custom tag${sharedTags.length === 1 ? "" : "s"}.`
+                  : " Customs stay local to this browser."}
               </p>
             </div>
           </div>

@@ -174,6 +174,80 @@ export const entityAppearances = sqliteTable("entity_appearances", {
     .notNull(),
 });
 
+export const campaignTags = sqliteTable(
+  "campaign_tags",
+  {
+    id: text("id").primaryKey(),
+    campaignId: text("campaign_id")
+      .notNull()
+      .references(() => campaigns.id, { onDelete: "cascade" }),
+    tagKey: text("tag_key").notNull(),
+    definitionJson: text("definition_json").notNull(),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => user.id),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("campaign_tags_campaign_key_uidx").on(
+      table.campaignId,
+      table.tagKey,
+    ),
+  ],
+);
+
+export const vaultItems = sqliteTable("vault_items", {
+  id: text("id").primaryKey(),
+  campaignId: text("campaign_id")
+    .notNull()
+    .references(() => campaigns.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  notes: text("notes").notNull().default(""),
+  profileId: text("profile_id").notNull(),
+  totalWear: integer("total_wear").notNull(),
+  selectedJson: text("selected_json").notNull(),
+  snapshotJson: text("snapshot_json").notNull(),
+  copiedFromId: text("copied_from_id"),
+  createdBy: text("created_by")
+    .notNull()
+    .references(() => user.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date())
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+export const vaultItemSaves = sqliteTable(
+  "vault_item_saves",
+  {
+    id: text("id").primaryKey(),
+    vaultItemId: text("vault_item_id")
+      .notNull()
+      .references(() => vaultItems.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("vault_item_saves_item_user_uidx").on(
+      table.vaultItemId,
+      table.userId,
+    ),
+  ],
+);
+
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
   owner: one(user, {
     fields: [campaigns.ownerId],
@@ -184,6 +258,8 @@ export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
   gameSessions: many(gameSessions),
   entities: many(entities),
   maps: many(campaignMaps),
+  tags: many(campaignTags),
+  vaultItems: many(vaultItems),
 }));
 
 export const campaignMembersRelations = relations(
@@ -268,3 +344,33 @@ export const entityAppearancesRelations = relations(
     }),
   }),
 );
+
+export const campaignTagsRelations = relations(campaignTags, ({ one }) => ({
+  campaign: one(campaigns, {
+    fields: [campaignTags.campaignId],
+    references: [campaigns.id],
+  }),
+}));
+
+export const vaultItemsRelations = relations(vaultItems, ({ one, many }) => ({
+  campaign: one(campaigns, {
+    fields: [vaultItems.campaignId],
+    references: [campaigns.id],
+  }),
+  creator: one(user, {
+    fields: [vaultItems.createdBy],
+    references: [user.id],
+  }),
+  saves: many(vaultItemSaves),
+}));
+
+export const vaultItemSavesRelations = relations(vaultItemSaves, ({ one }) => ({
+  item: one(vaultItems, {
+    fields: [vaultItemSaves.vaultItemId],
+    references: [vaultItems.id],
+  }),
+  user: one(user, {
+    fields: [vaultItemSaves.userId],
+    references: [user.id],
+  }),
+}));

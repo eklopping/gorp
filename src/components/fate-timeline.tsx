@@ -2,10 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  FateRiverCanvas,
-  type FateQuality,
-} from "@/components/fate-river-canvas";
+import { FateRiverCanvas } from "@/components/fate-river-canvas";
 import type { FateEntityPlacement, FateSession } from "@/lib/fate-timeline";
 import { uploadUrl } from "@/lib/upload-url";
 
@@ -13,7 +10,6 @@ const SESSION_GAP = 460;
 const PAD_X = 160;
 const HEIGHT = 640;
 const MAIN_Y = 320;
-const QUALITY_KEY = "gorp-fate-quality";
 
 type Props = {
   campaignId: string;
@@ -35,22 +31,13 @@ function branchGeometry(x: number, upward: boolean) {
   return { tipX, tipY, upward, x };
 }
 
-function readStoredQuality(): FateQuality {
-  if (typeof window === "undefined") return "balanced";
-  const value = window.localStorage.getItem(QUALITY_KEY);
-  if (value === "high" || value === "balanced" || value === "low") return value;
-  return "balanced";
-}
-
 export function FateTimeline({ campaignId, sessions, placements }: Props) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef({ left: 0, width: 900 });
   const [zoomedSessionId, setZoomedSessionId] = useState<string | null>(null);
   const [hoveredEntityId, setHoveredEntityId] = useState<string | null>(null);
-  const [quality, setQuality] = useState<FateQuality>("balanced");
 
   useEffect(() => {
-    setQuality(readStoredQuality());
     const node = scrollerRef.current;
     if (!node) return;
     viewRef.current = { left: node.scrollLeft, width: node.clientWidth };
@@ -124,14 +111,9 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
         transformOrigin: "center center",
       };
 
-  function updateQuality(next: FateQuality) {
-    setQuality(next);
-    window.localStorage.setItem(QUALITY_KEY, next);
-  }
-
   if (sessions.length === 0) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-[#0a0806] p-8 text-sm text-[#d9c6a5]">
+      <div className="border-y border-white/10 bg-[#0a0806] px-6 py-8 text-sm text-[#d9c6a5]">
         Add a session to begin the thread of fate. ID cards will appear on the
         strand between the session they enter and the next.
       </div>
@@ -140,7 +122,7 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-end justify-between gap-3 px-6">
         <div>
           <h2 className="font-[family-name:var(--font-display)] text-3xl tracking-tight text-[#f3e6c8]">
             Thread of fate
@@ -151,36 +133,20 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
             and the next.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-2 text-xs text-[#b9a07a]">
-            Quality
-            <select
-              value={quality}
-              onChange={(event) =>
-                updateQuality(event.target.value as FateQuality)
-              }
-              className="rounded-md border border-[#c49a55]/35 bg-[#1a120a] px-2 py-1.5 text-[#f0d9a8]"
-            >
-              <option value="low">Low</option>
-              <option value="balanced">Balanced</option>
-              <option value="high">High</option>
-            </select>
-          </label>
-          {zoomedSessionId ? (
-            <button
-              type="button"
-              onClick={() => setZoomedSessionId(null)}
-              className="rounded-lg border border-[#c49a55]/40 bg-[#1a120a]/80 px-4 py-2 text-sm text-[#f0d9a8] hover:border-[#e2b56a]"
-            >
-              Zoom out
-            </button>
-          ) : null}
-        </div>
+        {zoomedSessionId ? (
+          <button
+            type="button"
+            onClick={() => setZoomedSessionId(null)}
+            className="rounded-lg border border-[#c49a55]/40 bg-[#1a120a]/80 px-4 py-2 text-sm text-[#f0d9a8] hover:border-[#e2b56a]"
+          >
+            Zoom out
+          </button>
+        ) : null}
       </div>
 
       <div
         ref={scrollerRef}
-        className="fate-scroll relative overflow-x-scroll overflow-y-hidden rounded-2xl border border-[#3a2a16] bg-[#070504] shadow-[0_0_80px_-20px_rgba(255,150,40,0.35)]"
+        className="fate-scroll relative w-full overflow-x-scroll overflow-y-hidden border-y border-[#3a2a16] bg-[#070504] shadow-[0_0_80px_-20px_rgba(255,150,40,0.35)]"
         style={{ height: HEIGHT }}
         onScroll={(event) => {
           const node = event.currentTarget;
@@ -203,7 +169,7 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
             height={HEIGHT}
             mainY={MAIN_Y}
             branches={branches}
-            quality={quality}
+            quality="balanced"
             viewRef={viewRef}
           />
 

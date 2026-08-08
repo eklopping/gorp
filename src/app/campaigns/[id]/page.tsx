@@ -53,6 +53,12 @@ export default async function CampaignPage({
               Fate timeline
             </Link>
             <Link
+              href={`/campaigns/${id}/vault`}
+              className="rounded-lg border border-line px-4 py-2 text-sm hover:border-accent"
+            >
+              Item vault
+            </Link>
+            <Link
               href={`/campaigns/${id}/entities/new`}
               className="rounded-lg border border-line px-4 py-2 text-sm hover:border-accent"
             >
