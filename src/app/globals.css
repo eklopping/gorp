@@ -70,3 +70,61 @@ a {
     transform: translateY(0);
   }
 }
+
+@keyframes fate-dash {
+  to {
+    stroke-dashoffset: -240;
+  }
+}
+
+@keyframes fate-dash-slow {
+  to {
+    stroke-dashoffset: -160;
+  }
+}
+
+@keyframes fate-shimmer {
+  to {
+    stroke-dashoffset: -320;
+  }
+}
+
+.fate-flow {
+  stroke-dasharray: 14 18;
+  animation: fate-dash 9s linear infinite;
+}
+
+.fate-flow-slow {
+  stroke-dasharray: 22 28;
+  animation: fate-dash-slow 16s linear infinite;
+}
+
+.fate-flow-shimmer {
+  stroke-dasharray: 4 28;
+  animation: fate-shimmer 7s linear infinite;
+}
+
+.fate-scroll {
+  scrollbar-width: auto;
+  scrollbar-color: #8a6840 #cfd8cf;
+}
+
+.fate-scroll::-webkit-scrollbar {
+  height: 14px;
+}
+
+.fate-scroll::-webkit-scrollbar-track {
+  background: color-mix(in oklab, #cfd8cf 80%, white);
+  border-top: 1px solid color-mix(in oklab, #6e4f2c 18%, transparent);
+}
+
+.fate-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #7a5a32, #9a7340, #6e4f2c);
+  border-radius: 999px;
+  border: 3px solid #cfd8cf;
+}
+
+.fate-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(90deg, #6e4f2c, #8a6840);
+}
+

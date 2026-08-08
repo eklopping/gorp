@@ -48,8 +48,9 @@ Data lives in the `sessionnote-data` volume (`/data/sessionnote.db` in the conta
 - Shared session notes create + edit
 - ID cards for people and places (searchable, editable, portrait upload)
 - Map import with pins linking ID cards and optional session appearances
+- Fate timeline: animated river of sessions with ID cards between strands
 
 ## Next
 
 - Mentions in notes + live sidebar history
-- Campaign timeline view
+- Richer zoomed session strand view

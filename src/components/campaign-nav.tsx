@@ -1,10 +1,11 @@
 import Link from "next/link";
 
 const links = [
-  { suffix: "", label: "Sessions" },
-  { suffix: "/entities", label: "ID cards" },
-  { suffix: "/maps", label: "Maps" },
-  { suffix: "/members", label: "Members" },
+  { suffix: "", label: "Sessions", key: "sessions" },
+  { suffix: "/fate", label: "Fate", key: "fate" },
+  { suffix: "/entities", label: "ID cards", key: "entities" },
+  { suffix: "/maps", label: "Maps", key: "maps" },
+  { suffix: "/members", label: "Members", key: "members" },
 ] as const;
 
 export function CampaignNav({
@@ -12,17 +13,13 @@ export function CampaignNav({
   active,
 }: {
   campaignId: string;
-  active: "sessions" | "entities" | "maps" | "members";
+  active: "sessions" | "fate" | "entities" | "maps" | "members";
 }) {
   return (
     <nav className="mt-5 flex flex-wrap gap-2">
       {links.map((link) => {
-        const key =
-          link.suffix === ""
-            ? "sessions"
-            : (link.suffix.slice(1) as typeof active);
         const href = `/campaigns/${campaignId}${link.suffix}`;
-        const isActive = key === active;
+        const isActive = link.key === active;
 
         return (
           <Link

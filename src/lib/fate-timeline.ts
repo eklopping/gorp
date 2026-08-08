@@ -1,0 +1,131 @@
+"use server";
+
+import { asc, eq } from "drizzle-orm";
+import { db } from "./db";
+import {
+  entities,
+  entityAppearances,
+  gameSessions,
+} from "./schema";
+
+export type FateSession = {
+  id: string;
+  title: string;
+  sessionDate: string | null;
+  outline: string;
+  createdAt: Date;
+};
+
+export type FateEntityPlacement = {
+  entityId: string;
+  name: string;
+  type: "person" | "place";
+  role: string;
+  allegiance: string;
+  description: string;
+  imagePath: string | null;
+  fromSessionId: string;
+  fromSessionIndex: number;
+  note: string;
+};
+
+function sessionSortKey(session: FateSession) {
+  if (session.sessionDate) return `${session.sessionDate}T00:00:00.000Z`;
+  return session.createdAt.toISOString();
+}
+
+export async function getFateTimelineData(campaignId: string) {
+  const sessionsRaw = await db
+    .select({
+      id: gameSessions.id,
+      title: gameSessions.title,
+      sessionDate: gameSessions.sessionDate,
+      outline: gameSessions.outline,
+      createdAt: gameSessions.createdAt,
+    })
+    .from(gameSessions)
+    .where(eq(gameSessions.campaignId, campaignId));
+
+  const sessions = [...sessionsRaw].sort((a, b) =>
+    sessionSortKey(a).localeCompare(sessionSortKey(b)),
+  );
+
+  const campaignEntities = await db
+    .select()
+    .from(entities)
+    .where(eq(entities.campaignId, campaignId))
+    .orderBy(asc(entities.createdAt));
+
+  const appearances = await db
+    .select({
+      entityId: entityAppearances.entityId,
+      gameSessionId: entityAppearances.gameSessionId,
+      note: entityAppearances.note,
+      createdAt: entityAppearances.createdAt,
+    })
+    .from(entityAppearances)
+    .innerJoin(entities, eq(entities.id, entityAppearances.entityId))
+    .where(eq(entities.campaignId, campaignId));
+
+  const sessionIndex = new Map(sessions.map((session, index) => [session.id, index]));
+  const placements: FateEntityPlacement[] = [];
+  const seen = new Set<string>();
+
+  for (const appearance of appearances) {
+    const index = sessionIndex.get(appearance.gameSessionId);
+    if (index === undefined) continue;
+    const entity = campaignEntities.find((row) => row.id === appearance.entityId);
+    if (!entity) continue;
+
+    const key = `${entity.id}:${appearance.gameSessionId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    placements.push({
+      entityId: entity.id,
+      name: entity.name,
+      type: entity.type,
+      role: entity.role,
+      allegiance: entity.allegiance,
+      description: entity.description,
+      imagePath: entity.imagePath,
+      fromSessionId: appearance.gameSessionId,
+      fromSessionIndex: index,
+      note: appearance.note,
+    });
+  }
+
+  // Entities with no logged appearance still show after the session
+  // that was current when they were created (or the first session).
+  for (const entity of campaignEntities) {
+    const already = placements.some((placement) => placement.entityId === entity.id);
+    if (already || sessions.length === 0) continue;
+
+    let index = 0;
+    for (let i = 0; i < sessions.length; i += 1) {
+      if (sessions[i].createdAt.getTime() <= entity.createdAt.getTime()) {
+        index = i;
+      }
+    }
+
+    placements.push({
+      entityId: entity.id,
+      name: entity.name,
+      type: entity.type,
+      role: entity.role,
+      allegiance: entity.allegiance,
+      description: entity.description,
+      imagePath: entity.imagePath,
+      fromSessionId: sessions[index].id,
+      fromSessionIndex: index,
+      note: "Introduced",
+    });
+  }
+
+  placements.sort(
+    (a, b) =>
+      a.fromSessionIndex - b.fromSessionIndex || a.name.localeCompare(b.name),
+  );
+
+  return { sessions, placements };
+}
