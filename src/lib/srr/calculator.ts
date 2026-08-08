@@ -23,7 +23,32 @@ export function resolveTag(
   tagId: string,
   repo: TagDefinition[],
 ): TagDefinition | undefined {
-  return repo.find((tag) => tag.id === tagId) ?? BUILTIN_TAGS.find((tag) => tag.id === tagId);
+  return (
+    repo.find((tag) => tag.id === tagId) ??
+    BUILTIN_TAGS.find((tag) => tag.id === tagId)
+  );
+}
+
+/** Whether a tag can be offered/added for the given item profile. */
+export function isTagCompatibleWithProfile(
+  profile: ItemProfile,
+  tag: TagDefinition,
+) {
+  if (tag.inherent) return false;
+  if (profile.forbiddenTagIds?.includes(tag.id)) return false;
+  if (tag.forbiddenProfileIds?.includes(profile.id)) return false;
+
+  if (tag.requiresInherent?.length) {
+    const inherent = new Set(profile.inherentTags ?? []);
+    if (!tag.requiresInherent.every((id) => inherent.has(id))) return false;
+  }
+
+  if (tag.compatibleSlots?.length) {
+    const slots = new Set(profile.slots);
+    if (!tag.compatibleSlots.some((slot) => slots.has(slot))) return false;
+  }
+
+  return true;
 }
 
 export function maxPositiveTagSlots(totalWear: number, negativeSlotsUsed: number) {

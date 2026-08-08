@@ -1,4 +1,4 @@
-import type { TagDefinition, TagType } from "@/lib/srr/types";
+import type { ItemSlot, TagDefinition, TagType } from "@/lib/srr/types";
 
 /** Base coin cost by tag type (SRR Vol.3). Multi-type tags sum these. */
 export const TAG_TYPE_COIN: Record<TagType, number | null> = {
@@ -14,6 +14,17 @@ export const TAG_TYPE_COIN: Record<TagType, number | null> = {
   Unique: null,
 };
 
+const MELEE: ItemSlot[] = ["melee-1h", "melee-2h"];
+const RANGED: ItemSlot[] = ["ranged-simple", "ranged-advanced"];
+const ARMOR: ItemSlot[] = ["armor-light", "armor-medium", "armor-heavy"];
+const WEARABLE: ItemSlot[] = [
+  "armor-light",
+  "armor-medium",
+  "armor-heavy",
+  "clothing",
+  "shield",
+];
+
 export const BUILTIN_TAGS: TagDefinition[] = [
   {
     id: "reinforced",
@@ -21,6 +32,7 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     types: ["B"],
     description: "Common durability tag. Stackable.",
     stackableMax: 3,
+    compatibleSlots: [...WEARABLE, ...MELEE, "shield"],
   },
   {
     id: "brutal",
@@ -28,19 +40,22 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     types: ["B"],
     description: "Melee damage die upgrade style tag.",
     stackableMax: 2,
-    appliesTo: "Melee weapons",
+    compatibleSlots: MELEE,
   },
   {
     id: "piercing",
     name: "Piercing",
     types: ["B"],
     description: "Armor piercing style tag.",
+    compatibleSlots: [...MELEE, "ranged-simple"],
+    forbiddenProfileIds: ["rifle", "shotgun", "pistol"],
   },
   {
     id: "arrow-proof",
     name: "Arrow-proof",
     types: ["B"],
     description: "Mark Wear to ignore 2 AP from ranged until next turn.",
+    compatibleSlots: WEARABLE,
   },
   {
     id: "comfortable",
@@ -48,6 +63,7 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     types: ["B"],
     description: "Reduce Load from base trait and positive tags.",
     loadMod: -1,
+    compatibleSlots: [...WEARABLE, "accessory"],
   },
   {
     id: "lightweight",
@@ -62,7 +78,7 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     types: ["B", "I", "C"],
     description: "Add +1 Toughness. Stackable ranks use B/I/C costs.",
     stackableMax: 3,
-    appliesTo: "Clothing, armor, shields",
+    compatibleSlots: [...ARMOR, "clothing", "shield"],
   },
   {
     id: "magazine",
@@ -70,14 +86,16 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     types: ["I"],
     description: "Avoid Reload penalty equal to stacks. Stackable.",
     stackableMax: 4,
-    appliesTo: "Ranged with Reload",
+    compatibleSlots: RANGED,
+    requiresInherent: ["reload"],
   },
   {
     id: "quick-load",
     name: "Quick Load",
     types: ["C"],
     description: "Mark Wear to ignore Reload penalty for this attack.",
-    appliesTo: "Ranged with Reload",
+    compatibleSlots: RANGED,
+    requiresInherent: ["reload"],
   },
   {
     id: "sturdy",
@@ -89,22 +107,25 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     id: "catfolk-steel",
     name: "Catfolk Steel",
     types: ["MI"],
-    description: "Material. Hit-and-run focused. Often -1 Coin / -1 Wear-like tradeoffs in text.",
+    description:
+      "Material. Hit-and-run focused. Often -1 Coin / -1 Wear-like tradeoffs in text.",
     coinModFlat: -1,
     wearMod: 0,
-    appliesTo: "Light/Medium armor, one-handed melee/thrown",
+    compatibleSlots: ["armor-light", "armor-medium", "melee-1h"],
   },
   {
     id: "foxfolk-steel",
     name: "Foxfolk Steel",
     types: ["MI"],
     description: "Gives temporary Wear (tracked narratively).",
+    compatibleSlots: [...MELEE, ...ARMOR, ...RANGED, "shield"],
   },
   {
     id: "taln-gold",
     name: "Taln Gold",
     types: ["MI", "C"],
-    description: "Opulent material. Value increased (+4 or ×2 — apply as +4 flat here).",
+    description:
+      "Opulent material. Value increased (+4 or ×2 — apply as +4 flat here).",
     coinModFlat: 4,
     wearMod: -1,
   },
@@ -158,6 +179,7 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     types: ["N"],
     description: "Reload penalty tag. Often inherent on firearms/crossbows.",
     inherent: true,
+    compatibleSlots: RANGED,
   },
   {
     id: "unstable",
@@ -170,6 +192,7 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     name: "Immoral",
     types: ["N"],
     description: "Narrative/negative reputation style tag.",
+    compatibleSlots: MELEE,
   },
   {
     id: "memorable",
@@ -185,6 +208,7 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     stackableMax: 1,
     wearMod: 1,
     coinModFlat: 1,
+    forbiddenProfileIds: ["rifle", "shotgun", "pistol"],
   },
 ];
 

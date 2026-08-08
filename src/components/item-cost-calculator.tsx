@@ -5,9 +5,15 @@ import { ITEM_PROFILES } from "@/data/srr/profiles";
 import { BUILTIN_TAGS } from "@/data/srr/tags";
 import {
   calculateItem,
+  isTagCompatibleWithProfile,
   mergeTagRepos,
 } from "@/lib/srr/calculator";
-import type { SelectedTag, TagDefinition, TagType } from "@/lib/srr/types";
+import type {
+  ItemSlot,
+  SelectedTag,
+  TagDefinition,
+  TagType,
+} from "@/lib/srr/types";
 
 const CUSTOM_KEY = "gorp-srr-custom-tags";
 const BUILD_KEY = "gorp-srr-last-build";
@@ -23,6 +29,19 @@ const ALL_TYPES: TagType[] = [
   "NA",
   "Legendary",
   "Unique",
+];
+
+const ALL_SLOTS: { id: ItemSlot; label: string }[] = [
+  { id: "melee-1h", label: "Melee 1H" },
+  { id: "melee-2h", label: "Melee 2H" },
+  { id: "ranged-simple", label: "Simple ranged" },
+  { id: "ranged-advanced", label: "Advanced ranged" },
+  { id: "armor-light", label: "Light armor" },
+  { id: "armor-medium", label: "Medium armor" },
+  { id: "armor-heavy", label: "Heavy armor" },
+  { id: "shield", label: "Shield" },
+  { id: "accessory", label: "Accessory" },
+  { id: "clothing", label: "Clothing" },
 ];
 
 function loadCustomTags(): TagDefinition[] {
@@ -50,6 +69,8 @@ export function ItemCostCalculator() {
   const [newDesc, setNewDesc] = useState("");
   const [newStack, setNewStack] = useState(1);
   const [newLoad, setNewLoad] = useState(0);
+  const [newSlots, setNewSlots] = useState<ItemSlot[]>([]);
+
 
   useEffect(() => {
     setCustomTags(loadCustomTags());
@@ -83,6 +104,23 @@ export function ItemCostCalculator() {
     setTotalWear((wear) => Math.max(wear, profile.startingWear));
   }, [profile.startingWear]);
 
+  useEffect(() => {
+    setSelected((prev) => {
+      const next = prev.filter((row) => {
+        const tag = repo.find((item) => item.id === row.tagId);
+        if (!tag) return false;
+        return isTagCompatibleWithProfile(profile, tag);
+      });
+      if (
+        next.length === prev.length &&
+        next.every((row, index) => row.tagId === prev[index]?.tagId)
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, [profile, repo]);
+
   const result = useMemo(
     () =>
       calculateItem({
@@ -96,8 +134,12 @@ export function ItemCostCalculator() {
     [profileId, totalWear, selected, repo, uniqueSeg, uniqueBp],
   );
 
-  const filtered = repo.filter((tag) => {
-    if (tag.inherent) return false;
+  const compatibleTags = useMemo(
+    () => repo.filter((tag) => isTagCompatibleWithProfile(profile, tag)),
+    [repo, profile],
+  );
+
+  const filtered = compatibleTags.filter((tag) => {
     const q = filter.trim().toLowerCase();
     if (!q) return true;
     return (
@@ -113,6 +155,8 @@ export function ItemCostCalculator() {
   }
 
   function addTag(tagId: string) {
+    const tag = repo.find((item) => item.id === tagId);
+    if (!tag || !isTagCompatibleWithProfile(profile, tag)) return;
     setSelected((prev) => {
       if (prev.some((row) => row.tagId === tagId)) return prev;
       return [...prev, { tagId, stacks: 1 }];
@@ -143,6 +187,7 @@ export function ItemCostCalculator() {
       description: newDesc.trim() || "Custom tag",
       stackableMax: newStack > 1 ? newStack : undefined,
       loadMod: newLoad || undefined,
+      compatibleSlots: newSlots.length > 0 ? newSlots : undefined,
       custom: true,
     };
     persistCustom([...customTags.filter((row) => row.id !== id), tag]);
@@ -151,6 +196,7 @@ export function ItemCostCalculator() {
     setNewTypes(["B"]);
     setNewStack(1);
     setNewLoad(0);
+    setNewSlots([]);
     addTag(id);
   }
 
@@ -337,36 +383,47 @@ export function ItemCostCalculator() {
           <h2 className="font-[family-name:var(--font-display)] text-2xl">
             Tag repository
           </h2>
+          <p className="mt-1 text-xs text-ink-soft">
+            Showing tags compatible with{" "}
+            <span className="font-medium text-ink">{profile.name}</span> (
+            {filtered.length} available).
+          </p>
           <input
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
-            placeholder="Search tags…"
+            placeholder="Search compatible tags…"
             className="mt-3 w-full rounded-lg border border-line bg-paper-deep/40 px-3 py-2 text-sm"
           />
           <ul className="mt-3 max-h-56 space-y-2 overflow-y-auto">
-            {filtered.map((tag) => (
-              <li
-                key={tag.id}
-                className="flex items-start justify-between gap-2 rounded-xl border border-line px-3 py-2"
-              >
-                <div>
-                  <p className="text-sm font-medium">
-                    {tag.name}{" "}
-                    <span className="text-xs text-ink-soft">
-                      [{tag.types.join("/")}]{tag.custom ? " · custom" : ""}
-                    </span>
-                  </p>
-                  <p className="text-xs text-ink-soft">{tag.description}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => addTag(tag.id)}
-                  className="shrink-0 rounded-lg bg-accent px-2 py-1 text-xs text-paper hover:bg-accent-deep"
-                >
-                  Add
-                </button>
+            {filtered.length === 0 ? (
+              <li className="text-sm text-ink-soft">
+                No compatible tags match this profile/search.
               </li>
-            ))}
+            ) : (
+              filtered.map((tag) => (
+                <li
+                  key={tag.id}
+                  className="flex items-start justify-between gap-2 rounded-xl border border-line px-3 py-2"
+                >
+                  <div>
+                    <p className="text-sm font-medium">
+                      {tag.name}{" "}
+                      <span className="text-xs text-ink-soft">
+                        [{tag.types.join("/")}]{tag.custom ? " · custom" : ""}
+                      </span>
+                    </p>
+                    <p className="text-xs text-ink-soft">{tag.description}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => addTag(tag.id)}
+                    className="shrink-0 rounded-lg bg-accent px-2 py-1 text-xs text-paper hover:bg-accent-deep"
+                  >
+                    Add
+                  </button>
+                </li>
+              ))
+            )}
           </ul>
 
           <div className="mt-5 border-t border-line pt-4">
@@ -406,6 +463,34 @@ export function ItemCostCalculator() {
                       }`}
                     >
                       {type}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-ink-soft">
+                Compatible item slots (leave empty = all profiles)
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {ALL_SLOTS.map((slot) => {
+                  const on = newSlots.includes(slot.id);
+                  return (
+                    <button
+                      key={slot.id}
+                      type="button"
+                      onClick={() =>
+                        setNewSlots((prev) =>
+                          on
+                            ? prev.filter((row) => row !== slot.id)
+                            : [...prev, slot.id],
+                        )
+                      }
+                      className={`rounded-md px-2 py-1 text-xs ${
+                        on
+                          ? "bg-accent text-paper"
+                          : "border border-line text-ink-soft"
+                      }`}
+                    >
+                      {slot.label}
                     </button>
                   );
                 })}
