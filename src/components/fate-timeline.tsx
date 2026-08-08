@@ -113,49 +113,60 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
 
   if (sessions.length === 0) {
     return (
-      <div className="border-y border-white/10 bg-[#0a0806] px-6 py-8 text-sm text-[#d9c6a5]">
-        Add a session to begin the thread of fate. ID cards will appear on the
-        strand between the session they enter and the next.
+      <div className="w-full">
+        <div
+          className="pointer-events-none h-28 w-full bg-gradient-to-b from-transparent via-[#1a140f]/55 to-[#070504]"
+          aria-hidden
+        />
+        <div className="bg-[#070504] px-6 pb-10 pt-2 text-sm text-[#d9c6a5]">
+          Add a session to begin the thread of fate. ID cards will appear on the
+          strand between the session they enter and the next.
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-end justify-between gap-3 px-6">
-        <div>
-          <h2 className="font-[family-name:var(--font-display)] text-3xl tracking-tight text-[#f3e6c8]">
-            Thread of fate
-          </h2>
-          <p className="mt-1 max-w-2xl text-sm text-[#b9a07a]">
-            Scroll the golden river. Session filaments branch from the current.
-            ID cards rest between the session they were created or referenced
-            and the next.
-          </p>
-        </div>
-        {zoomedSessionId ? (
-          <button
-            type="button"
-            onClick={() => setZoomedSessionId(null)}
-            className="rounded-lg border border-[#c49a55]/40 bg-[#1a120a]/80 px-4 py-2 text-sm text-[#f0d9a8] hover:border-[#e2b56a]"
-          >
-            Zoom out
-          </button>
-        ) : null}
-      </div>
-
+    <div className="w-full">
       <div
-        ref={scrollerRef}
-        className="fate-scroll relative w-full overflow-x-scroll overflow-y-hidden border-y border-[#3a2a16] bg-[#070504] shadow-[0_0_80px_-20px_rgba(255,150,40,0.35)]"
-        style={{ height: HEIGHT }}
-        onScroll={(event) => {
-          const node = event.currentTarget;
-          viewRef.current = {
-            left: node.scrollLeft,
-            width: node.clientWidth,
-          };
-        }}
-      >
+        className="pointer-events-none h-28 w-full bg-gradient-to-b from-transparent via-[#2a1c12]/35 to-[#070504]"
+        aria-hidden
+      />
+      <div className="bg-[#070504]">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-end justify-between gap-3 px-6 pb-4 pt-1">
+          <div>
+            <h2 className="font-[family-name:var(--font-display)] text-3xl tracking-tight text-[#f3e6c8]">
+              Thread of fate
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm text-[#b9a07a]">
+              Scroll the golden river. Session filaments branch from the
+              current. ID cards rest between the session they were created or
+              referenced and the next.
+            </p>
+          </div>
+          {zoomedSessionId ? (
+            <button
+              type="button"
+              onClick={() => setZoomedSessionId(null)}
+              className="rounded-lg border border-[#c49a55]/40 bg-[#1a120a]/80 px-4 py-2 text-sm text-[#f0d9a8] hover:border-[#e2b56a]"
+            >
+              Zoom out
+            </button>
+          ) : null}
+        </div>
+
+        <div
+          ref={scrollerRef}
+          className="fate-scroll relative w-full overflow-x-scroll overflow-y-hidden border-t border-[#3a2a16]/50 bg-[#070504] shadow-[inset_0_24px_48px_-28px_rgba(255,150,40,0.18)]"
+          style={{ height: HEIGHT }}
+          onScroll={(event) => {
+            const node = event.currentTarget;
+            viewRef.current = {
+              left: node.scrollLeft,
+              width: node.clientWidth,
+            };
+          }}
+        >
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,140,40,0.12),transparent_58%)]"
           aria-hidden
@@ -267,6 +278,11 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
           })}
         </div>
       </div>
+      </div>
+      <div
+        className="pointer-events-none h-16 w-full bg-gradient-to-b from-[#070504] to-transparent"
+        aria-hidden
+      />
     </div>
   );
 }

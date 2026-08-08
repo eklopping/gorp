@@ -22,7 +22,7 @@ export default async function FatePage({
   return (
     <>
       <SiteHeader userName={session.user.name} />
-      <main className="w-full flex-1 pb-10">
+      <main className="w-full flex-1 pb-0">
         <div className="mx-auto w-full max-w-6xl px-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -49,7 +49,7 @@ export default async function FatePage({
           <CampaignNav campaignId={id} active="fate" />
         </div>
 
-        <div className="mt-6 w-full">
+        <div className="mt-4 w-full">
           <FateTimeline
             campaignId={id}
             sessions={sessions}
