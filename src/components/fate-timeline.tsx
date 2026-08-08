@@ -44,7 +44,7 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
 
     const syncView = () => {
       viewRef.current = { left: node.scrollLeft, width: node.clientWidth };
-      setViewportWidth(Math.max(node.clientWidth, window.innerWidth));
+      setViewportWidth(node.clientWidth);
     };
 
     syncView();
@@ -126,8 +126,8 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
 
   if (sessions.length === 0) {
     return (
-      <div className="w-full space-y-4">
-        <div className="mx-auto w-full max-w-6xl px-6">
+      <div className="space-y-4">
+        <div>
           <h2 className="font-[family-name:var(--font-display)] text-3xl tracking-tight text-ink">
             Thread of fate
           </h2>
@@ -136,7 +136,7 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
             the strand between the session they enter and the next.
           </p>
         </div>
-        <div className="w-full border-y border-[#c49a55]/40 bg-[#0a0806] px-6 py-10 text-sm text-[#d9c6a5] shadow-[0_0_48px_-24px_rgba(196,154,85,0.35)]">
+        <div className="rounded-2xl border border-[#c49a55]/40 bg-[#0a0806] px-6 py-10 text-sm text-[#d9c6a5] shadow-[0_20px_50px_-36px_rgba(20,32,28,0.55)]">
           No sessions yet — create one to open the river.
         </div>
       </div>
@@ -144,8 +144,8 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
   }
 
   return (
-    <div className="w-full space-y-4 pb-10">
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-end justify-between gap-3 px-6">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-[family-name:var(--font-display)] text-3xl tracking-tight text-ink">
             Thread of fate
@@ -167,14 +167,13 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
         ) : null}
       </div>
 
-      {/* Full-bleed river window: edge-to-edge strands, bordered top & bottom */}
-      <div className="relative w-full overflow-hidden border-y border-[#c49a55]/45 bg-[#070504] shadow-[0_18px_50px_-28px_rgba(20,32,28,0.55),0_0_60px_-30px_rgba(196,154,85,0.4)]">
+      <div className="relative overflow-hidden rounded-2xl border border-[#c49a55]/45 bg-[#070504] shadow-[0_22px_55px_-34px_rgba(20,32,28,0.6),0_0_40px_-28px_rgba(196,154,85,0.35)]">
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 z-30 h-8 bg-gradient-to-b from-[#1a120a]/80 to-transparent"
+          className="pointer-events-none absolute inset-x-0 top-0 z-30 h-6 bg-gradient-to-b from-[#1a120a]/70 to-transparent"
           aria-hidden
         />
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-8 bg-gradient-to-t from-[#1a120a]/80 to-transparent"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-6 bg-gradient-to-t from-[#1a120a]/70 to-transparent"
           aria-hidden
         />
 
