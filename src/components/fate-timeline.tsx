@@ -10,6 +10,7 @@ const SESSION_GAP = 460;
 const PAD_X = 160;
 const HEIGHT = 640;
 const MAIN_Y = 320;
+const DRAG_THRESHOLD = 6;
 
 type Props = {
   campaignId: string;
@@ -34,9 +35,17 @@ function branchGeometry(x: number, upward: boolean) {
 export function FateTimeline({ campaignId, sessions, placements }: Props) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef({ left: 0, width: 900 });
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startScroll: number;
+    moved: boolean;
+  } | null>(null);
+  const suppressClickRef = useRef(false);
   const [zoomedSessionId, setZoomedSessionId] = useState<string | null>(null);
   const [hoveredEntityId, setHoveredEntityId] = useState<string | null>(null);
   const [viewportWidth, setViewportWidth] = useState(1200);
+  const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
     const node = scrollerRef.current;
@@ -44,7 +53,7 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
 
     const syncView = () => {
       viewRef.current = { left: node.scrollLeft, width: node.clientWidth };
-      setViewportWidth(node.clientWidth);
+      setViewportWidth(Math.max(node.clientWidth, window.innerWidth));
     };
 
     syncView();
@@ -124,10 +133,64 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
         transformOrigin: "center center",
       };
 
+  function onPointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.button !== 0) return;
+    const node = scrollerRef.current;
+    if (!node) return;
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startScroll: node.scrollLeft,
+      moved: false,
+    };
+    suppressClickRef.current = false;
+    node.setPointerCapture(event.pointerId);
+  }
+
+  function onPointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+    const node = scrollerRef.current;
+    if (!drag || !node || drag.pointerId !== event.pointerId) return;
+
+    const dx = event.clientX - drag.startX;
+    if (!drag.moved && Math.abs(dx) < DRAG_THRESHOLD) return;
+
+    if (!drag.moved) {
+      drag.moved = true;
+      suppressClickRef.current = true;
+      setDragging(true);
+    }
+
+    node.scrollLeft = drag.startScroll - dx;
+    viewRef.current = {
+      left: node.scrollLeft,
+      width: node.clientWidth,
+    };
+  }
+
+  function endDrag(event: React.PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+    const node = scrollerRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    dragRef.current = null;
+    setDragging(false);
+    if (node?.hasPointerCapture(event.pointerId)) {
+      node.releasePointerCapture(event.pointerId);
+    }
+  }
+
+  function guardClick(event: React.SyntheticEvent) {
+    if (!suppressClickRef.current) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    suppressClickRef.current = false;
+    return true;
+  }
+
   if (sessions.length === 0) {
     return (
-      <div className="space-y-4">
-        <div>
+      <div className="w-full space-y-4">
+        <div className="mx-auto w-full max-w-6xl px-6">
           <h2 className="font-[family-name:var(--font-display)] text-3xl tracking-tight text-ink">
             Thread of fate
           </h2>
@@ -136,7 +199,7 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
             the strand between the session they enter and the next.
           </p>
         </div>
-        <div className="rounded-2xl border border-[#c49a55]/40 bg-[#0a0806] px-6 py-10 text-sm text-[#d9c6a5] shadow-[0_20px_50px_-36px_rgba(20,32,28,0.55)]">
+        <div className="w-full border-y-[6px] border-[#c49a55]/65 bg-[#0a0806] px-6 py-10 text-sm text-[#d9c6a5] shadow-[inset_0_1px_0_rgba(255,220,160,0.22),inset_0_-1px_0_rgba(255,220,160,0.22)]">
           No sessions yet — create one to open the river.
         </div>
       </div>
@@ -144,16 +207,15 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="w-full space-y-4 pb-10">
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-end justify-between gap-3 px-6">
         <div>
           <h2 className="font-[family-name:var(--font-display)] text-3xl tracking-tight text-ink">
             Thread of fate
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-            Scroll the golden river. Session filaments branch from the current.
-            ID cards rest between the session they were created or referenced
-            and the next.
+            Click and drag to travel the golden river. Session filaments branch
+            from the current; ID cards rest between the sessions they enter.
           </p>
         </div>
         {zoomedSessionId ? (
@@ -167,20 +229,26 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
         ) : null}
       </div>
 
-      <div className="relative overflow-hidden rounded-2xl border border-[#c49a55]/45 bg-[#070504] shadow-[0_22px_55px_-34px_rgba(20,32,28,0.6),0_0_40px_-28px_rgba(196,154,85,0.35)]">
+      <div className="relative w-full overflow-hidden border-y-[6px] border-[#c49a55]/70 bg-[#070504] shadow-[0_22px_55px_-34px_rgba(20,32,28,0.55),inset_0_1px_0_rgba(255,220,160,0.28),inset_0_-1px_0_rgba(255,220,160,0.28)]">
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 z-30 h-6 bg-gradient-to-b from-[#1a120a]/70 to-transparent"
+          className="pointer-events-none absolute inset-x-0 top-0 z-30 h-5 bg-gradient-to-b from-[#1a120a]/55 to-transparent"
           aria-hidden
         />
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-6 bg-gradient-to-t from-[#1a120a]/70 to-transparent"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-5 bg-gradient-to-t from-[#1a120a]/55 to-transparent"
           aria-hidden
         />
 
         <div
           ref={scrollerRef}
-          className="fate-scroll relative w-full overflow-x-scroll overflow-y-hidden"
-          style={{ height: HEIGHT }}
+          className={`fate-scroll relative w-full overflow-x-auto overflow-y-hidden select-none ${
+            dragging ? "cursor-grabbing" : "cursor-grab"
+          }`}
+          style={{ height: HEIGHT, touchAction: "pan-y" }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
           onScroll={(event) => {
             const node = event.currentTarget;
             viewRef.current = {
@@ -212,6 +280,10 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
                 href={`/campaigns/${campaignId}/entities/${placement.entityId}`}
                 className="group absolute z-10 -translate-x-1/2 -translate-y-1/2"
                 style={{ left: x, top: y }}
+                draggable={false}
+                onClick={(event) => {
+                  if (guardClick(event)) return;
+                }}
                 onMouseEnter={() => setHoveredEntityId(placement.entityId)}
                 onMouseLeave={() => setHoveredEntityId(null)}
               >
@@ -231,6 +303,7 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
                           alt=""
                           className="h-full w-full object-cover"
                           loading="lazy"
+                          draggable={false}
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-wider text-[#c9ae7d]">
@@ -266,9 +339,10 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
                   <button
                     type="button"
                     className="w-full text-left"
-                    onClick={() =>
-                      setZoomedSessionId(isZoomed ? null : node.session.id)
-                    }
+                    onClick={(event) => {
+                      if (guardClick(event)) return;
+                      setZoomedSessionId(isZoomed ? null : node.session.id);
+                    }}
                   >
                     <p className="text-[10px] uppercase tracking-[0.18em] text-[#c9ae7d]">
                       Session strand
@@ -291,6 +365,9 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
                     <Link
                       href={`/campaigns/${campaignId}/sessions/${node.session.id}`}
                       className="mt-3 inline-block text-xs font-medium text-[#f0c56d] underline-offset-2 hover:underline"
+                      onClick={(event) => {
+                        if (guardClick(event)) return;
+                      }}
                     >
                       Open session notes →
                     </Link>

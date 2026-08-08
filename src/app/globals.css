@@ -105,26 +105,13 @@ a {
 }
 
 .fate-scroll {
-  scrollbar-width: auto;
-  scrollbar-color: #c49a55 #1a120a;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .fate-scroll::-webkit-scrollbar {
-  height: 14px;
-}
-
-.fate-scroll::-webkit-scrollbar-track {
-  background: #120d09;
-  border-top: 1px solid color-mix(in oklab, #c49a55 22%, transparent);
-}
-
-.fate-scroll::-webkit-scrollbar-thumb {
-  background: linear-gradient(90deg, #7a4a18, #e0a84a, #8a5518);
-  border-radius: 999px;
-  border: 3px solid #120d09;
-}
-
-.fate-scroll::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(90deg, #a86620, #f0c56d);
+  display: none;
+  height: 0;
+  width: 0;
 }
 
