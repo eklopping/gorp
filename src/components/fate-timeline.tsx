@@ -36,17 +36,31 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
   const viewRef = useRef({ left: 0, width: 900 });
   const [zoomedSessionId, setZoomedSessionId] = useState<string | null>(null);
   const [hoveredEntityId, setHoveredEntityId] = useState<string | null>(null);
+  const [viewportWidth, setViewportWidth] = useState(1200);
 
   useEffect(() => {
     const node = scrollerRef.current;
     if (!node) return;
-    viewRef.current = { left: node.scrollLeft, width: node.clientWidth };
-  }, []);
 
-  const width = Math.max(
-    980,
-    PAD_X + Math.max(sessions.length, 1) * SESSION_GAP + 300,
-  );
+    const syncView = () => {
+      viewRef.current = { left: node.scrollLeft, width: node.clientWidth };
+      setViewportWidth(Math.max(node.clientWidth, window.innerWidth));
+    };
+
+    syncView();
+    const ro = new ResizeObserver(syncView);
+    ro.observe(node);
+    window.addEventListener("resize", syncView);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", syncView);
+    };
+  }, [sessions.length]);
+
+  const contentWidth =
+    PAD_X + Math.max(sessions.length, 1) * SESSION_GAP + 300;
+  // Always fill the visible screen so the river never dead-ends mid-viewport
+  const width = Math.max(viewportWidth, contentWidth);
 
   const sessionNodes = useMemo(
     () =>
@@ -157,7 +171,7 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
 
         <div
           ref={scrollerRef}
-          className="fate-scroll relative w-full overflow-x-scroll overflow-y-hidden border-t border-[#3a2a16]/50 bg-[#070504] shadow-[inset_0_24px_48px_-28px_rgba(255,150,40,0.18)]"
+          className="fate-scroll relative w-full overflow-x-scroll overflow-y-hidden bg-[#070504]"
           style={{ height: HEIGHT }}
           onScroll={(event) => {
             const node = event.currentTarget;
@@ -168,11 +182,11 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
           }}
         >
         <div
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,140,40,0.12),transparent_58%)]"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,140,40,0.1),transparent_62%)]"
           aria-hidden
         />
         <div
-          className="fate-canvas relative transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
+          className="fate-canvas relative min-w-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
           style={{ width, height: HEIGHT, ...canvasStyle }}
         >
           <FateRiverCanvas
