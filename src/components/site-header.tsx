@@ -16,6 +16,12 @@ export function SiteHeader({
         </p>
       </Link>
       <nav className="flex items-center gap-3 text-sm">
+        <Link
+          href="/tools/item-cost"
+          className="rounded-md px-3 py-1.5 transition hover:text-accent-deep"
+        >
+          Item cost
+        </Link>
         {userName ? (
           <>
             <span className="hidden text-ink-soft sm:inline">{userName}</span>

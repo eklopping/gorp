@@ -17,7 +17,10 @@ export default async function DashboardPage() {
             Your campaigns
           </h1>
           <p className="mt-2 text-sm text-ink-soft">
-            Open a table you belong to, or create one as GM and invite players.
+            Open a table you belong to, or create one as GM and invite players.{" "}
+            <Link href="/tools/item-cost" className="text-accent-deep underline-offset-2 hover:underline">
+              Item cost calculator
+            </Link>
           </p>
 
           <div className="mt-6 space-y-3">
