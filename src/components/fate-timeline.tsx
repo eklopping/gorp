@@ -143,6 +143,15 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
 
   function onPointerDown(event: React.PointerEvent<HTMLDivElement>) {
     if (event.button !== 0) return;
+    const target = event.target as HTMLElement | null;
+    // Don't capture/drag when interacting with cards/controls — that breaks zoom clicks
+    if (
+      target?.closest(
+        "button, a, input, textarea, select, label, [data-no-drag]",
+      )
+    ) {
+      return;
+    }
     const node = scrollerRef.current;
     if (!node) return;
     dragRef.current = {
@@ -303,8 +312,10 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
             {entityNodes.map(({ placement, x, y }) => (
               <div
                 key={`${placement.entityId}-${placement.fromSessionId}`}
+                data-no-drag
                 className="group absolute z-10 -translate-x-1/2 -translate-y-1/2"
                 style={{ left: x, top: y }}
+                onPointerDown={(event) => event.stopPropagation()}
                 onMouseEnter={() => setHoveredEntityId(placement.entityId)}
                 onMouseLeave={() => setHoveredEntityId(null)}
               >
@@ -408,12 +419,14 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
               return (
                 <div
                   key={node.session.id}
+                  data-no-drag
                   className={`absolute z-20 w-52 origin-center -translate-x-1/2 -translate-y-1/2 rounded-2xl border text-left shadow-[0_0_34px_-14px_rgba(255,170,60,0.8)] transition duration-300 ${
                     isZoomed
                       ? "scale-105 border-[#f0c56d] bg-[#24180f]"
                       : "border-[#c49a55]/40 bg-[#17100b]/95 hover:scale-105 hover:border-[#e2b56a]"
                   }`}
                   style={{ left: node.tipX, top: node.tipY }}
+                  onPointerDown={(event) => event.stopPropagation()}
                 >
                   <button
                     type="button"
