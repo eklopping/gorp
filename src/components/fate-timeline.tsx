@@ -329,10 +329,10 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
               return (
                 <div
                   key={node.session.id}
-                  className={`absolute z-20 w-48 -translate-x-1/2 -translate-y-1/2 rounded-2xl border px-4 py-3 text-left shadow-[0_0_34px_-14px_rgba(255,170,60,0.8)] transition duration-300 ${
+                  className={`absolute z-20 w-48 origin-center -translate-x-1/2 -translate-y-1/2 rounded-2xl border px-4 py-3 text-left shadow-[0_0_34px_-14px_rgba(255,170,60,0.8)] transition duration-300 ${
                     isZoomed
-                      ? "border-[#f0c56d] bg-[#24180f]"
-                      : "border-[#c49a55]/40 bg-[#17100b]/95 hover:-translate-y-1 hover:border-[#e2b56a]"
+                      ? "scale-105 border-[#f0c56d] bg-[#24180f]"
+                      : "border-[#c49a55]/40 bg-[#17100b]/95 hover:scale-105 hover:border-[#e2b56a]"
                   }`}
                   style={{ left: node.tipX, top: node.tipY }}
                 >
