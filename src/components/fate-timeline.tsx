@@ -245,9 +245,9 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
             Thread of fate
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-            Click and drag to travel the golden river. Use ← → on cards to
-            reorder sessions and ID cards; delete removes them from the
-            campaign.
+            Click a session to zoom in, then open it from the card. Click
+            anywhere else on the river to zoom out. Drag to travel; use ← → to
+            reorder.
           </p>
           {actionMessage ? (
             <p className="mt-2 text-xs text-warn">{actionMessage}</p>
@@ -284,6 +284,12 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
           onPointerMove={onPointerMove}
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
+          onClick={(event) => {
+            if (guardClick(event)) return;
+            if (!zoomedSessionId) return;
+            // Empty river / non-card clicks zoom out; cards stop propagation.
+            setZoomedSessionId(null);
+          }}
           onScroll={(event) => {
             const node = event.currentTarget;
             viewRef.current = {
@@ -316,6 +322,11 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
                 className="group absolute z-10 -translate-x-1/2 -translate-y-1/2"
                 style={{ left: x, top: y }}
                 onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  // Zoom out when tapping an ID card (unless opening it via the link).
+                  event.stopPropagation();
+                  if (zoomedSessionId) setZoomedSessionId(null);
+                }}
                 onMouseEnter={() => setHoveredEntityId(placement.entityId)}
                 onMouseLeave={() => setHoveredEntityId(null)}
               >
@@ -332,6 +343,7 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
                     draggable={false}
                     onClick={(event) => {
                       if (guardClick(event)) return;
+                      event.stopPropagation();
                     }}
                   >
                     <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-[#2b1d12]">
@@ -416,10 +428,12 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
 
             {sessionNodes.map((node) => {
               const isZoomed = zoomedSessionId === node.session.id;
+              const sessionHref = `/campaigns/${campaignId}/sessions/${node.session.id}`;
               return (
                 <div
                   key={node.session.id}
                   data-no-drag
+                  data-fate-session={node.session.id}
                   className={`absolute z-20 w-52 origin-center -translate-x-1/2 -translate-y-1/2 rounded-2xl border text-left shadow-[0_0_34px_-14px_rgba(255,170,60,0.8)] transition duration-300 ${
                     isZoomed
                       ? "scale-105 border-[#f0c56d] bg-[#24180f]"
@@ -427,32 +441,59 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
                   }`}
                   style={{ left: node.tipX, top: node.tipY }}
                   onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => event.stopPropagation()}
                 >
-                  <button
-                    type="button"
-                    className="w-full px-4 pt-3 pb-2 text-left"
-                    onClick={(event) => {
-                      if (guardClick(event)) return;
-                      setZoomedSessionId(isZoomed ? null : node.session.id);
-                    }}
-                  >
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#c9ae7d]">
-                      Session strand
-                    </p>
-                    <p className="mt-1 font-[family-name:var(--font-display)] text-lg leading-tight text-[#f6e7c4]">
-                      {node.session.title}
-                    </p>
-                    {node.session.sessionDate ? (
-                      <p className="mt-1 text-xs text-[#b89a6c]">
-                        {node.session.sessionDate}
+                  {isZoomed ? (
+                    <Link
+                      href={sessionHref}
+                      className="block w-full px-4 pt-3 pb-2 text-left"
+                      draggable={false}
+                      onClick={(event) => {
+                        if (guardClick(event)) return;
+                        event.stopPropagation();
+                      }}
+                    >
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[#c9ae7d]">
+                        Session strand
                       </p>
-                    ) : null}
-                    {!isZoomed ? (
+                      <p className="mt-1 font-[family-name:var(--font-display)] text-lg leading-tight text-[#f6e7c4]">
+                        {node.session.title}
+                      </p>
+                      {node.session.sessionDate ? (
+                        <p className="mt-1 text-xs text-[#b89a6c]">
+                          {node.session.sessionDate}
+                        </p>
+                      ) : null}
+                      <p className="mt-2 text-[11px] font-medium text-[#f0c56d]">
+                        Open session →
+                      </p>
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      className="w-full px-4 pt-3 pb-2 text-left"
+                      onClick={(event) => {
+                        if (guardClick(event)) return;
+                        event.stopPropagation();
+                        setZoomedSessionId(node.session.id);
+                      }}
+                    >
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[#c9ae7d]">
+                        Session strand
+                      </p>
+                      <p className="mt-1 font-[family-name:var(--font-display)] text-lg leading-tight text-[#f6e7c4]">
+                        {node.session.title}
+                      </p>
+                      {node.session.sessionDate ? (
+                        <p className="mt-1 text-xs text-[#b89a6c]">
+                          {node.session.sessionDate}
+                        </p>
+                      ) : null}
                       <p className="mt-2 text-[11px] text-[#a88c5e]">
                         Click to zoom into this thread
                       </p>
-                    ) : null}
-                  </button>
+                    </button>
+                  )}
                   <div
                     className="flex items-center gap-1 border-t border-[#c49a55]/20 px-3 py-2"
                     onPointerDown={(event) => event.stopPropagation()}
@@ -505,17 +546,6 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
                     >
                       ⌫
                     </RiverControl>
-                    {isZoomed ? (
-                      <Link
-                        href={`/campaigns/${campaignId}/sessions/${node.session.id}`}
-                        className="ml-auto text-[11px] font-medium text-[#f0c56d] underline-offset-2 hover:underline"
-                        onClick={(event) => {
-                          if (guardClick(event)) return;
-                        }}
-                      >
-                        Open →
-                      </Link>
-                    ) : null}
                   </div>
                 </div>
               );
