@@ -13,7 +13,10 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "SessionNote",
+  title: {
+    default: "Savage Root",
+    template: "%s · Savage Root",
+  },
   description:
     "Shared TTRPG session notes, ID cards, timelines, and campaign maps.",
 };

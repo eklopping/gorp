@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export function SiteHeader({
@@ -6,14 +7,20 @@ export function SiteHeader({
   userName?: string | null;
 }) {
   return (
-    <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6">
-      <Link href={userName ? "/dashboard" : "/"} className="group">
-        <p className="font-[family-name:var(--font-display)] text-2xl tracking-tight text-ink transition-transform duration-300 group-hover:-translate-y-0.5">
-          SessionNote
-        </p>
-        <p className="text-xs uppercase tracking-[0.22em] text-ink-soft/70">
-          Campaign field journal
-        </p>
+    <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-5">
+      <Link
+        href={userName ? "/dashboard" : "/"}
+        className="group flex items-center gap-3"
+        aria-label="Savage Root home"
+      >
+        <Image
+          src="/savage-root-logo.png"
+          alt="Savage Root"
+          width={180}
+          height={120}
+          priority
+          className="h-12 w-auto transition-transform duration-300 group-hover:-translate-y-0.5 sm:h-14"
+        />
       </Link>
       <nav className="flex items-center gap-3 text-sm">
         <Link

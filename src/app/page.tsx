@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { getSession } from "@/lib/session";
@@ -10,10 +11,15 @@ export default async function HomePage() {
       <SiteHeader userName={session?.user.name} />
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 pb-16 pt-8">
         <div className="max-w-2xl animate-[fade-rise_700ms_ease-out]">
-          <p className="font-[family-name:var(--font-display)] text-5xl leading-[1.05] tracking-tight text-ink sm:text-6xl">
-            SessionNote
-          </p>
-          <h1 className="mt-5 max-w-xl text-xl text-ink-soft sm:text-2xl">
+          <Image
+            src="/savage-root-logo.png"
+            alt="Savage Root"
+            width={520}
+            height={346}
+            priority
+            className="h-auto w-full max-w-md"
+          />
+          <h1 className="mt-6 max-w-xl text-xl text-ink-soft sm:text-2xl">
             Shared campaign notes your whole table can edit—sessions, people,
             places, and the trail between them.
           </h1>
