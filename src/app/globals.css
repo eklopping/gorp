@@ -106,7 +106,7 @@ a {
 
 .fate-scroll {
   scrollbar-width: auto;
-  scrollbar-color: #8a6840 #cfd8cf;
+  scrollbar-color: #c49a55 #1a120a;
 }
 
 .fate-scroll::-webkit-scrollbar {
@@ -114,17 +114,17 @@ a {
 }
 
 .fate-scroll::-webkit-scrollbar-track {
-  background: color-mix(in oklab, #cfd8cf 80%, white);
-  border-top: 1px solid color-mix(in oklab, #6e4f2c 18%, transparent);
+  background: #120d09;
+  border-top: 1px solid color-mix(in oklab, #c49a55 22%, transparent);
 }
 
 .fate-scroll::-webkit-scrollbar-thumb {
-  background: linear-gradient(90deg, #7a5a32, #9a7340, #6e4f2c);
+  background: linear-gradient(90deg, #7a4a18, #e0a84a, #8a5518);
   border-radius: 999px;
-  border: 3px solid #cfd8cf;
+  border: 3px solid #120d09;
 }
 
 .fate-scroll::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(90deg, #6e4f2c, #8a6840);
+  background: linear-gradient(90deg, #a86620, #f0c56d);
 }
 

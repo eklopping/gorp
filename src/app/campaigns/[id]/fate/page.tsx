@@ -31,6 +31,11 @@ export default async function FatePage({
             <h1 className="mt-1 font-[family-name:var(--font-display)] text-4xl tracking-tight">
               Fate timeline
             </h1>
+            <p className="mt-2 max-w-2xl text-sm text-ink-soft">
+              A living river of golden strands—sessions branch from the current,
+              and people and places settle between the moments they enter the
+              story.
+            </p>
           </div>
           <Link
             href={`/campaigns/${id}/sessions/new`}
