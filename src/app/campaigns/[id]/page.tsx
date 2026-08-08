@@ -56,7 +56,7 @@ export default async function CampaignPage({
               href={`/campaigns/${id}/vault`}
               className="rounded-lg border border-line px-4 py-2 text-sm hover:border-accent"
             >
-              Item vault
+              Gear
             </Link>
             <Link
               href={`/campaigns/${id}/entities/new`}

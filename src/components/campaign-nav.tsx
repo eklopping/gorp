@@ -3,7 +3,7 @@ import Link from "next/link";
 const links = [
   { suffix: "", label: "Sessions", key: "sessions" },
   { suffix: "/fate", label: "Fate", key: "fate" },
-  { suffix: "/vault", label: "Vault", key: "vault" },
+  { suffix: "/vault", label: "Gear", key: "vault" },
   { suffix: "/entities", label: "ID cards", key: "entities" },
   { suffix: "/maps", label: "Maps", key: "maps" },
   { suffix: "/members", label: "Members", key: "members" },

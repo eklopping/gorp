@@ -59,7 +59,7 @@ function loadCustomTags(): TagDefinition[] {
 }
 
 type Props = {
-  campaignId?: string;
+  campaignId: string;
   campaignTags?: TagDefinition[];
 };
 
@@ -78,9 +78,9 @@ export function ItemCostCalculator({
   const [itemName, setItemName] = useState("");
   const [itemNotes, setItemNotes] = useState("");
   const [message, setMessage] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [publishing, startPublish] = useTransition();
+  const [sharingTag, startShareTag] = useTransition();
 
-  // New custom tag form
   const [newName, setNewName] = useState("");
   const [newTypes, setNewTypes] = useState<TagType[]>(["B"]);
   const [newDesc, setNewDesc] = useState("");
@@ -177,8 +177,8 @@ export function ItemCostCalculator({
     localStorage.setItem(CUSTOM_KEY, JSON.stringify(next));
   }
 
-  function addTag(tagId: string) {
-    const tag = repo.find((item) => item.id === tagId);
+  function addTag(tagId: string, knownTag?: TagDefinition) {
+    const tag = knownTag ?? repo.find((item) => item.id === tagId);
     if (!tag || !isTagCompatibleWithProfile(profile, tag)) return;
     setSelected((prev) => {
       if (prev.some((row) => row.tagId === tagId)) return prev;
@@ -220,29 +220,27 @@ export function ItemCostCalculator({
     setNewStack(1);
     setNewLoad(0);
     setNewSlots([]);
-    addTag(id);
+    addTag(id, tag);
 
-    if (campaignId) {
-      startTransition(async () => {
-        const result = await upsertCampaignTagAction(campaignId, tag);
-        if ("error" in result && result.error) {
-          setMessage(result.error);
-          return;
-        }
-        setSharedTags((prev) => [
-          ...prev.filter((row) => row.id !== tag.id),
-          { ...tag, custom: true },
-        ]);
-        setMessage(`Shared “${tag.name}” with the campaign vault.`);
-      });
-    }
+    setMessage(null);
+    startShareTag(async () => {
+      const shareResult = await upsertCampaignTagAction(campaignId, tag);
+      if ("error" in shareResult && shareResult.error) {
+        setMessage(shareResult.error);
+        return;
+      }
+      setSharedTags((prev) => [
+        ...prev.filter((row) => row.id !== tag.id),
+        { ...tag, custom: true },
+      ]);
+      setMessage(`Shared “${tag.name}” with the campaign vault.`);
+    });
   }
 
   function publishToVault() {
-    if (!campaignId) return;
     setMessage(null);
-    startTransition(async () => {
-      const result = await publishVaultItemAction(campaignId, {
+    startPublish(async () => {
+      const publishResult = await publishVaultItemAction(campaignId, {
         name: itemName,
         notes: itemNotes,
         profileId,
@@ -250,8 +248,8 @@ export function ItemCostCalculator({
         selected,
         customTags,
       });
-      if ("error" in result && result.error) {
-        setMessage(result.error);
+      if ("error" in publishResult && publishResult.error) {
+        setMessage(publishResult.error);
         return;
       }
       setMessage(`Published “${itemName.trim()}” to the campaign vault.`);
@@ -269,47 +267,41 @@ export function ItemCostCalculator({
           </h2>
           <p className="mt-1 text-sm text-ink-soft">
             SRR Vol.3 item creation value + Vol.1 Tinker Unique Creation resource
-            / clock.
-            {campaignId
-              ? " Custom tags can be shared to this campaign; publish builds to the vault."
-              : " Custom tags save in this browser."}
+            / clock. Custom tags share to this campaign; publish builds to the
+            vault.
           </p>
         </div>
 
-        {campaignId ? (
-          <div className="space-y-3 rounded-xl border border-dashed border-line p-3">
-            <label className="block text-sm">
-              <span className="font-medium">Item name</span>
-              <input
-                value={itemName}
-                onChange={(event) => setItemName(event.target.value)}
-                placeholder="e.g. Emberpike"
-                className="mt-1.5 w-full rounded-lg border border-line bg-paper-deep/40 px-3 py-2"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium">Notes (optional)</span>
-              <textarea
-                value={itemNotes}
-                onChange={(event) => setItemNotes(event.target.value)}
-                rows={2}
-                placeholder="Origin, quirks, who found it…"
-                className="mt-1.5 w-full rounded-lg border border-line bg-paper-deep/40 px-3 py-2"
-              />
-            </label>
-            <button
-              type="button"
-              disabled={pending || !itemName.trim()}
-              onClick={publishToVault}
-              className="rounded-lg bg-accent px-3 py-2 text-sm text-paper hover:bg-accent-deep disabled:opacity-50"
-            >
-              {pending ? "Publishing…" : "Publish to campaign vault"}
-            </button>
-            {message ? (
-              <p className="text-xs text-ink-soft">{message}</p>
-            ) : null}
-          </div>
-        ) : null}
+        <div className="space-y-3 rounded-xl border border-dashed border-line p-3">
+          <label className="block text-sm">
+            <span className="font-medium">Item name</span>
+            <input
+              value={itemName}
+              onChange={(event) => setItemName(event.target.value)}
+              placeholder="e.g. Emberpike"
+              className="mt-1.5 w-full rounded-lg border border-line bg-paper-deep/40 px-3 py-2"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="font-medium">Notes (optional)</span>
+            <textarea
+              value={itemNotes}
+              onChange={(event) => setItemNotes(event.target.value)}
+              rows={2}
+              placeholder="Origin, quirks, who found it…"
+              className="mt-1.5 w-full rounded-lg border border-line bg-paper-deep/40 px-3 py-2"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={publishing || !itemName.trim()}
+            onClick={publishToVault}
+            className="rounded-lg bg-accent px-3 py-2 text-sm text-paper hover:bg-accent-deep disabled:opacity-50"
+          >
+            {publishing ? "Publishing…" : "Publish to campaign vault"}
+          </button>
+          {message ? <p className="text-xs text-ink-soft">{message}</p> : null}
+        </div>
 
         <label className="block text-sm">
           <span className="font-medium">Item profile</span>
@@ -507,14 +499,15 @@ export function ItemCostCalculator({
                     <p className="text-sm font-medium">
                       {tag.name}{" "}
                       <span className="text-xs text-ink-soft">
-                        [{tag.types.join("/")}]{tag.custom ? " · custom" : ""}
+                        [{tag.types.join("/")}]
+                        {tag.custom ? " · custom" : ""}
                       </span>
                     </p>
                     <p className="text-xs text-ink-soft">{tag.description}</p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => addTag(tag.id)}
+                    onClick={() => addTag(tag.id, tag)}
                     className="shrink-0 rounded-lg bg-accent px-2 py-1 text-xs text-paper hover:bg-accent-deep"
                   >
                     Add
@@ -617,18 +610,18 @@ export function ItemCostCalculator({
               </div>
               <button
                 type="button"
+                disabled={sharingTag || !newName.trim() || newTypes.length === 0}
                 onClick={createCustomTag}
-                className="rounded-lg bg-accent px-3 py-2 text-sm text-paper hover:bg-accent-deep"
+                className="rounded-lg bg-accent px-3 py-2 text-sm text-paper hover:bg-accent-deep disabled:opacity-50"
               >
-                {campaignId
-                  ? "Save tag locally & share to campaign"
-                  : "Save tag to repository"}
+                {sharingTag
+                  ? "Sharing tag…"
+                  : "Save tag & share to campaign"}
               </button>
               <p className="text-[11px] text-ink-soft">
-                Built-in seed: {BUILTIN_TAGS.length} tags.
-                {campaignId
-                  ? ` Campaign vault has ${sharedTags.length} shared custom tag${sharedTags.length === 1 ? "" : "s"}.`
-                  : " Customs stay local to this browser."}
+                Built-in seed: {BUILTIN_TAGS.length} tags. Campaign vault has{" "}
+                {sharedTags.length} shared custom tag
+                {sharedTags.length === 1 ? "" : "s"}.
               </p>
             </div>
           </div>

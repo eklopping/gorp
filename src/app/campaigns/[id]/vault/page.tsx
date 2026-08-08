@@ -31,23 +31,28 @@ export default async function VaultPage({
             {campaign.name}
           </p>
           <h1 className="mt-1 font-[family-name:var(--font-display)] text-4xl tracking-tight">
-            Item vault
+            Gear
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-ink-soft">
-            Publish gear builds and custom tags for the table. Anyone can browse
-            the vault and save a personal copy for their own use.
+            Campaign item calculator and shared vault. Builds and custom tags
+            stay with this table so everyone can use them.
           </p>
         </div>
 
         <CampaignNav campaignId={id} active="vault" />
 
         <section className="mt-8">
+          <ItemCostCalculator campaignId={id} campaignTags={tags} />
+        </section>
+
+        <section className="mt-10">
           <h2 className="font-[family-name:var(--font-display)] text-2xl">
-            Shared items
+            Shared vault
           </h2>
           <p className="mt-1 mb-4 text-sm text-ink-soft">
             {tags.length} campaign tag{tags.length === 1 ? "" : "s"} ·{" "}
-            {items.length} vault entr{items.length === 1 ? "y" : "ies"}
+            {items.length} vault entr{items.length === 1 ? "y" : "ies"}. Save a
+            copy of anyone&apos;s published item for your own use.
           </p>
           <VaultItemList
             campaignId={id}
@@ -55,10 +60,6 @@ export default async function VaultPage({
             currentUserId={session.user.id}
             isGm={membership.role === "gm"}
           />
-        </section>
-
-        <section className="mt-10">
-          <ItemCostCalculator campaignId={id} campaignTags={tags} />
         </section>
       </main>
     </>
