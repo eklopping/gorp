@@ -19,7 +19,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL=/data/sessionnote.db
-RUN mkdir -p /data
+ENV UPLOAD_DIR=/data/uploads
+RUN mkdir -p /data /data/uploads
 COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next

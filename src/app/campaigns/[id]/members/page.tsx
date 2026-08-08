@@ -8,6 +8,7 @@ import {
 } from "@/lib/actions";
 import { requireCampaignMember } from "@/lib/session";
 import { MembersManager } from "@/components/members-manager";
+import { CampaignNav } from "@/components/campaign-nav";
 import { SiteHeader } from "@/components/site-header";
 
 export default async function MembersPage({
@@ -40,6 +41,7 @@ export default async function MembersPage({
         <h1 className="mt-4 font-[family-name:var(--font-display)] text-4xl tracking-tight">
           Members & invites
         </h1>
+        <CampaignNav campaignId={id} active="members" />
         <div className="mt-6">
           <MembersManager
             campaignId={id}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createGameSessionAction } from "@/lib/actions";
 import { requireCampaignMember } from "@/lib/session";
+import { CampaignNav } from "@/components/campaign-nav";
 import { SiteHeader } from "@/components/site-header";
 import { Button, Field, Panel } from "@/components/ui";
 
@@ -27,20 +28,23 @@ export default async function NewSessionPage({
         >
           ← Back to campaign
         </Link>
+        <CampaignNav campaignId={id} active="sessions" />
         <Panel className="mt-4">
           <h1 className="font-[family-name:var(--font-display)] text-3xl">
             New session notes
           </h1>
           <p className="mt-1 text-sm text-ink-soft">
-            Capture the outline now. Entity ID cards and mentions come next.
+            Capture the outline, then pin people and places on a map to record
+            where you met them.
           </p>
           <form action={action} className="mt-5 space-y-4">
-            <Field label="Title" name="title" required placeholder="Session 3 — The drowned market" />
             <Field
-              label="Session date"
-              name="sessionDate"
-              type="date"
+              label="Title"
+              name="title"
+              required
+              placeholder="Session 3 — The drowned market"
             />
+            <Field label="Session date" name="sessionDate" type="date" />
             <Field
               label="Outline"
               name="outline"

@@ -5,6 +5,7 @@ import {
   updateGameSessionAction,
 } from "@/lib/actions";
 import { requireCampaignMember } from "@/lib/session";
+import { CampaignNav } from "@/components/campaign-nav";
 import { SiteHeader } from "@/components/site-header";
 import { Button, Field, Panel } from "@/components/ui";
 
@@ -33,12 +34,14 @@ export default async function SessionDetailPage({
         >
           ← Back to campaign
         </Link>
+        <CampaignNav campaignId={id} active="sessions" />
         <Panel className="mt-4">
           <h1 className="font-[family-name:var(--font-display)] text-3xl">
             Edit session notes
           </h1>
           <p className="mt-1 text-sm text-ink-soft">
-            Any campaign member can update this outline.
+            Any campaign member can update this outline. Use Maps to pin who you
+            met and where.
           </p>
           <form action={action} className="mt-5 space-y-4">
             <Field

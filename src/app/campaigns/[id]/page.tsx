@@ -5,6 +5,7 @@ import {
   listCampaignGameSessions,
 } from "@/lib/actions";
 import { requireCampaignMember } from "@/lib/session";
+import { CampaignNav } from "@/components/campaign-nav";
 import { SiteHeader } from "@/components/site-header";
 import { Panel } from "@/components/ui";
 
@@ -46,20 +47,23 @@ export default async function CampaignPage({
               New session
             </Link>
             <Link
-              href={`/campaigns/${id}/members`}
+              href={`/campaigns/${id}/entities/new`}
               className="rounded-lg border border-line px-4 py-2 text-sm hover:border-accent"
             >
-              Members & invites
+              New ID card
             </Link>
           </div>
         </div>
+
+        <CampaignNav campaignId={id} active="sessions" />
 
         <section className="mt-8">
           <h2 className="font-[family-name:var(--font-display)] text-2xl">
             Session notes
           </h2>
           <p className="mt-1 text-sm text-ink-soft">
-            Everyone in the campaign can create and edit notes.
+            Everyone in the campaign can create and edit notes. Link people and
+            places from ID cards and maps as you go.
           </p>
 
           <div className="mt-4 space-y-3">

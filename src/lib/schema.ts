@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { user } from "./auth-schema";
 
 export * from "./auth-schema";
@@ -91,6 +91,89 @@ export const gameSessions = sqliteTable("game_sessions", {
     .notNull(),
 });
 
+export const entities = sqliteTable("entities", {
+  id: text("id").primaryKey(),
+  campaignId: text("campaign_id")
+    .notNull()
+    .references(() => campaigns.id, { onDelete: "cascade" }),
+  type: text("type", { enum: ["person", "place"] }).notNull(),
+  name: text("name").notNull(),
+  allegiance: text("allegiance").notNull().default(""),
+  role: text("role").notNull().default(""),
+  description: text("description").notNull().default(""),
+  itemsOfInterest: text("items_of_interest").notNull().default(""),
+  imagePath: text("image_path"),
+  createdBy: text("created_by")
+    .notNull()
+    .references(() => user.id),
+  updatedBy: text("updated_by").references(() => user.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date())
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+export const campaignMaps = sqliteTable("campaign_maps", {
+  id: text("id").primaryKey(),
+  campaignId: text("campaign_id")
+    .notNull()
+    .references(() => campaigns.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  imagePath: text("image_path").notNull(),
+  createdBy: text("created_by")
+    .notNull()
+    .references(() => user.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date())
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+export const mapMarkers = sqliteTable("map_markers", {
+  id: text("id").primaryKey(),
+  mapId: text("map_id")
+    .notNull()
+    .references(() => campaignMaps.id, { onDelete: "cascade" }),
+  entityId: text("entity_id")
+    .notNull()
+    .references(() => entities.id, { onDelete: "cascade" }),
+  gameSessionId: text("game_session_id").references(() => gameSessions.id, {
+    onDelete: "set null",
+  }),
+  xPercent: real("x_percent").notNull(),
+  yPercent: real("y_percent").notNull(),
+  note: text("note").notNull().default(""),
+  createdBy: text("created_by")
+    .notNull()
+    .references(() => user.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+export const entityAppearances = sqliteTable("entity_appearances", {
+  id: text("id").primaryKey(),
+  entityId: text("entity_id")
+    .notNull()
+    .references(() => entities.id, { onDelete: "cascade" }),
+  gameSessionId: text("game_session_id")
+    .notNull()
+    .references(() => gameSessions.id, { onDelete: "cascade" }),
+  mapMarkerId: text("map_marker_id").references(() => mapMarkers.id, {
+    onDelete: "set null",
+  }),
+  note: text("note").notNull().default(""),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
   owner: one(user, {
     fields: [campaigns.ownerId],
@@ -99,6 +182,8 @@ export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
   members: many(campaignMembers),
   invites: many(campaignInvites),
   gameSessions: many(gameSessions),
+  entities: many(entities),
+  maps: many(campaignMaps),
 }));
 
 export const campaignMembersRelations = relations(
@@ -125,9 +210,61 @@ export const campaignInvitesRelations = relations(
   }),
 );
 
-export const gameSessionsRelations = relations(gameSessions, ({ one }) => ({
+export const gameSessionsRelations = relations(gameSessions, ({ one, many }) => ({
   campaign: one(campaigns, {
     fields: [gameSessions.campaignId],
     references: [campaigns.id],
   }),
+  appearances: many(entityAppearances),
+  markers: many(mapMarkers),
 }));
+
+export const entitiesRelations = relations(entities, ({ one, many }) => ({
+  campaign: one(campaigns, {
+    fields: [entities.campaignId],
+    references: [campaigns.id],
+  }),
+  appearances: many(entityAppearances),
+  markers: many(mapMarkers),
+}));
+
+export const campaignMapsRelations = relations(campaignMaps, ({ one, many }) => ({
+  campaign: one(campaigns, {
+    fields: [campaignMaps.campaignId],
+    references: [campaigns.id],
+  }),
+  markers: many(mapMarkers),
+}));
+
+export const mapMarkersRelations = relations(mapMarkers, ({ one }) => ({
+  map: one(campaignMaps, {
+    fields: [mapMarkers.mapId],
+    references: [campaignMaps.id],
+  }),
+  entity: one(entities, {
+    fields: [mapMarkers.entityId],
+    references: [entities.id],
+  }),
+  gameSession: one(gameSessions, {
+    fields: [mapMarkers.gameSessionId],
+    references: [gameSessions.id],
+  }),
+}));
+
+export const entityAppearancesRelations = relations(
+  entityAppearances,
+  ({ one }) => ({
+    entity: one(entities, {
+      fields: [entityAppearances.entityId],
+      references: [entities.id],
+    }),
+    gameSession: one(gameSessions, {
+      fields: [entityAppearances.gameSessionId],
+      references: [gameSessions.id],
+    }),
+    mapMarker: one(mapMarkers, {
+      fields: [entityAppearances.mapMarkerId],
+      references: [mapMarkers.id],
+    }),
+  }),
+);

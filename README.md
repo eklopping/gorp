@@ -39,17 +39,17 @@ docker compose up -d --build
 
 Data lives in the `sessionnote-data` volume (`/data/sessionnote.db` in the container). Put a reverse proxy (Caddy/Nginx) in front for TLS.
 
-## Current MVP
+## Current features
 
 - Sign up / log in
 - GM creates campaign (auto-creates invite)
 - Invite link join as player
 - GM kick (can rejoin) / ban (cannot rejoin)
 - Shared session notes create + edit
+- ID cards for people and places (searchable, editable, portrait upload)
+- Map import with pins linking ID cards and optional session appearances
 
 ## Next
 
-- Customizable ID cards (people/places)
-- Mentions in notes + sidebar history
-- Campaign timeline
-- Map import + markers
+- Mentions in notes + live sidebar history
+- Campaign timeline view

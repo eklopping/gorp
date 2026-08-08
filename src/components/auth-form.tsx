@@ -50,7 +50,7 @@ function AuthFormInner({ mode }: { mode: "login" | "signup" }) {
 
       <form action={onSubmit} className="mt-6 space-y-4">
         {mode === "signup" ? (
-          <Field label="Display name" name="name" required placeholder="Ethan" />
+          <Field label="Display name" name="name" required placeholder="Ash" />
         ) : null}
         <Field
           label="Email"
