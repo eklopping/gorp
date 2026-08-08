@@ -46,24 +46,6 @@ export default async function CampaignPage({
             >
               New session
             </Link>
-            <Link
-              href={`/campaigns/${id}/fate`}
-              className="rounded-lg border border-line px-4 py-2 text-sm hover:border-accent"
-            >
-              Fate timeline
-            </Link>
-            <Link
-              href={`/campaigns/${id}/vault`}
-              className="rounded-lg border border-line px-4 py-2 text-sm hover:border-accent"
-            >
-              Gear
-            </Link>
-            <Link
-              href={`/campaigns/${id}/entities/new`}
-              className="rounded-lg border border-line px-4 py-2 text-sm hover:border-accent"
-            >
-              New ID card
-            </Link>
           </div>
         </div>
 
