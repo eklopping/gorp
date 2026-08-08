@@ -7,22 +7,22 @@ export function SiteHeader({
   userName?: string | null;
 }) {
   return (
-    <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-5">
+    <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-6 py-4">
       <Link
         href={userName ? "/dashboard" : "/"}
-        className="group flex items-center gap-3"
+        className="group min-w-0 shrink"
         aria-label="Savage Root home"
       >
         <Image
           src="/savage-root-logo.png"
           alt="Savage Root"
-          width={180}
-          height={120}
+          width={681}
+          height={155}
           priority
-          className="h-12 w-auto transition-transform duration-300 group-hover:-translate-y-0.5 sm:h-14"
+          className="h-14 w-auto max-w-[min(100%,22rem)] transition-transform duration-300 group-hover:-translate-y-0.5 sm:h-16 sm:max-w-[26rem] md:h-[4.5rem] md:max-w-[30rem]"
         />
       </Link>
-      <nav className="flex items-center gap-3 text-sm">
+      <nav className="flex shrink-0 items-center gap-3 text-sm">
         {userName ? (
           <>
             <span className="hidden text-ink-soft sm:inline">{userName}</span>

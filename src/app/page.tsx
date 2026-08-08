@@ -14,10 +14,10 @@ export default async function HomePage() {
           <Image
             src="/savage-root-logo.png"
             alt="Savage Root"
-            width={520}
-            height={346}
+            width={681}
+            height={155}
             priority
-            className="h-auto w-full max-w-md"
+            className="h-auto w-full max-w-xl"
           />
           <h1 className="mt-6 max-w-xl text-xl text-ink-soft sm:text-2xl">
             Shared campaign notes your whole table can edit—sessions, people,
