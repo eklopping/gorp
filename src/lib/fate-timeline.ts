@@ -2,17 +2,15 @@
 
 import { asc, eq } from "drizzle-orm";
 import { db } from "./db";
-import {
-  entities,
-  entityAppearances,
-  gameSessions,
-} from "./schema";
+import { entities, entityAppearances } from "./schema";
+import { orderedSessions } from "./fate-order";
 
 export type FateSession = {
   id: string;
   title: string;
   sessionDate: string | null;
   outline: string;
+  sortOrder: number;
   createdAt: Date;
 };
 
@@ -26,35 +24,26 @@ export type FateEntityPlacement = {
   imagePath: string | null;
   fromSessionId: string;
   fromSessionIndex: number;
+  sortOrder: number;
   note: string;
 };
 
-function sessionSortKey(session: FateSession) {
-  if (session.sessionDate) return `${session.sessionDate}T00:00:00.000Z`;
-  return session.createdAt.toISOString();
-}
-
 export async function getFateTimelineData(campaignId: string) {
-  const sessionsRaw = await db
-    .select({
-      id: gameSessions.id,
-      title: gameSessions.title,
-      sessionDate: gameSessions.sessionDate,
-      outline: gameSessions.outline,
-      createdAt: gameSessions.createdAt,
-    })
-    .from(gameSessions)
-    .where(eq(gameSessions.campaignId, campaignId));
-
-  const sessions = [...sessionsRaw].sort((a, b) =>
-    sessionSortKey(a).localeCompare(sessionSortKey(b)),
-  );
+  const sessionsRaw = await orderedSessions(campaignId);
+  const sessions: FateSession[] = sessionsRaw.map((session) => ({
+    id: session.id,
+    title: session.title,
+    sessionDate: session.sessionDate,
+    outline: session.outline,
+    sortOrder: session.sortOrder,
+    createdAt: session.createdAt,
+  }));
 
   const campaignEntities = await db
     .select()
     .from(entities)
     .where(eq(entities.campaignId, campaignId))
-    .orderBy(asc(entities.createdAt));
+    .orderBy(asc(entities.sortOrder), asc(entities.createdAt));
 
   const appearances = await db
     .select({
@@ -67,20 +56,20 @@ export async function getFateTimelineData(campaignId: string) {
     .innerJoin(entities, eq(entities.id, entityAppearances.entityId))
     .where(eq(entities.campaignId, campaignId));
 
-  const sessionIndex = new Map(sessions.map((session, index) => [session.id, index]));
+  const sessionIndex = new Map(
+    sessions.map((session, index) => [session.id, index]),
+  );
   const placements: FateEntityPlacement[] = [];
-  const seen = new Set<string>();
+  const placed = new Set<string>();
 
-  for (const appearance of appearances) {
-    const index = sessionIndex.get(appearance.gameSessionId);
-    if (index === undefined) continue;
-    const entity = campaignEntities.find((row) => row.id === appearance.entityId);
-    if (!entity) continue;
-
-    const key = `${entity.id}:${appearance.gameSessionId}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-
+  function pushPlacement(
+    entity: (typeof campaignEntities)[number],
+    fromSessionId: string,
+    fromSessionIndex: number,
+    note: string,
+  ) {
+    if (placed.has(entity.id)) return;
+    placed.add(entity.id);
     placements.push({
       entityId: entity.id,
       name: entity.name,
@@ -89,17 +78,39 @@ export async function getFateTimelineData(campaignId: string) {
       allegiance: entity.allegiance,
       description: entity.description,
       imagePath: entity.imagePath,
-      fromSessionId: appearance.gameSessionId,
-      fromSessionIndex: index,
-      note: appearance.note,
+      fromSessionId,
+      fromSessionIndex,
+      sortOrder: entity.sortOrder,
+      note,
     });
   }
 
-  // Entities with no logged appearance still show after the session
-  // that was current when they were created (or the first session).
   for (const entity of campaignEntities) {
-    const already = placements.some((placement) => placement.entityId === entity.id);
-    if (already || sessions.length === 0) continue;
+    if (
+      entity.riverSessionId &&
+      sessionIndex.has(entity.riverSessionId)
+    ) {
+      pushPlacement(
+        entity,
+        entity.riverSessionId,
+        sessionIndex.get(entity.riverSessionId)!,
+        "On the river",
+      );
+    }
+  }
+
+  for (const appearance of appearances) {
+    const index = sessionIndex.get(appearance.gameSessionId);
+    if (index === undefined) continue;
+    const entity = campaignEntities.find(
+      (row) => row.id === appearance.entityId,
+    );
+    if (!entity || placed.has(entity.id)) continue;
+    pushPlacement(entity, appearance.gameSessionId, index, appearance.note);
+  }
+
+  for (const entity of campaignEntities) {
+    if (placed.has(entity.id) || sessions.length === 0) continue;
 
     let index = 0;
     for (let i = 0; i < sessions.length; i += 1) {
@@ -108,23 +119,14 @@ export async function getFateTimelineData(campaignId: string) {
       }
     }
 
-    placements.push({
-      entityId: entity.id,
-      name: entity.name,
-      type: entity.type,
-      role: entity.role,
-      allegiance: entity.allegiance,
-      description: entity.description,
-      imagePath: entity.imagePath,
-      fromSessionId: sessions[index].id,
-      fromSessionIndex: index,
-      note: "Introduced",
-    });
+    pushPlacement(entity, sessions[index].id, index, "Introduced");
   }
 
   placements.sort(
     (a, b) =>
-      a.fromSessionIndex - b.fromSessionIndex || a.name.localeCompare(b.name),
+      a.fromSessionIndex - b.fromSessionIndex ||
+      a.sortOrder - b.sortOrder ||
+      a.name.localeCompare(b.name),
   );
 
   return { sessions, placements };

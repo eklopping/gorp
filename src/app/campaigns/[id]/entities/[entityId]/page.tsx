@@ -10,6 +10,7 @@ import {
   listEntityAppearances,
   updateEntityAction,
 } from "@/lib/entity-actions";
+import { deleteEntityAction } from "@/lib/fate-actions";
 import { requireCampaignMember } from "@/lib/session";
 import { uploadUrl } from "@/lib/upload-url";
 
@@ -34,6 +35,11 @@ export default async function EntityDetailPage({
   async function appearanceAction(formData: FormData) {
     "use server";
     await addEntityAppearanceAction(id, entityId, formData);
+  }
+
+  async function deleteAction() {
+    "use server";
+    await deleteEntityAction(id, entityId);
   }
 
   return (
@@ -110,9 +116,21 @@ export default async function EntityDetailPage({
                   className="mt-1.5 block w-full text-sm"
                 />
               </label>
-              <Button>Save ID card</Button>
-            </form>
-          </Panel>
+                <Button>Save ID card</Button>
+              </form>
+              <form action={deleteAction} className="mt-4 border-t border-line pt-4">
+                <p className="text-xs text-ink-soft">
+                  Deleting removes this card from the campaign, maps, and Fate
+                  river.
+                </p>
+                <button
+                  type="submit"
+                  className="mt-3 rounded-lg border border-warn/40 px-4 py-2 text-sm text-warn hover:bg-warn/10"
+                >
+                  Delete ID card
+                </button>
+              </form>
+            </Panel>
 
           <div className="space-y-4">
             <Panel>

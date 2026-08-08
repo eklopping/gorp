@@ -78,6 +78,7 @@ export const gameSessions = sqliteTable("game_sessions", {
   title: text("title").notNull(),
   sessionDate: text("session_date"),
   outline: text("outline").notNull().default(""),
+  sortOrder: integer("sort_order").notNull().default(0),
   createdBy: text("created_by")
     .notNull()
     .references(() => user.id),
@@ -103,6 +104,11 @@ export const entities = sqliteTable("entities", {
   description: text("description").notNull().default(""),
   itemsOfInterest: text("items_of_interest").notNull().default(""),
   imagePath: text("image_path"),
+  /** Session strand the ID card sits after on the Fate river. */
+  riverSessionId: text("river_session_id").references(() => gameSessions.id, {
+    onDelete: "set null",
+  }),
+  sortOrder: integer("sort_order").notNull().default(0),
   createdBy: text("created_by")
     .notNull()
     .references(() => user.id),

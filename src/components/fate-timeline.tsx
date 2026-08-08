@@ -1,9 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { FateRiverCanvas } from "@/components/fate-river-canvas";
 import type { FateEntityPlacement, FateSession } from "@/lib/fate-timeline";
+import {
+  deleteEntityFromFateAction,
+  deleteGameSessionFromFateAction,
+  moveEntityOnRiverAction,
+  moveGameSessionAction,
+} from "@/lib/fate-actions";
 import { uploadUrl } from "@/lib/upload-url";
 
 const SESSION_GAP = 460;
@@ -46,6 +52,8 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
   const [hoveredEntityId, setHoveredEntityId] = useState<string | null>(null);
   const [viewportWidth, setViewportWidth] = useState(1200);
   const [dragging, setDragging] = useState(false);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
 
   useEffect(() => {
     const node = scrollerRef.current;
@@ -187,6 +195,20 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
     return true;
   }
 
+  function runRiverAction(
+    action: () => Promise<{ ok?: boolean; error?: string }>,
+  ) {
+    setActionMessage(null);
+    startTransition(async () => {
+      const result = await action();
+      if (result?.error) setActionMessage(result.error);
+    });
+  }
+
+  function confirmDelete(label: string) {
+    return window.confirm(`Delete ${label}? This cannot be undone.`);
+  }
+
   if (sessions.length === 0) {
     return (
       <div className="w-full space-y-4">
@@ -214,9 +236,13 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
             Thread of fate
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-            Click and drag to travel the golden river. Session filaments branch
-            from the current; ID cards rest between the sessions they enter.
+            Click and drag to travel the golden river. Use ← → on cards to
+            reorder sessions and ID cards; delete removes them from the
+            campaign.
           </p>
+          {actionMessage ? (
+            <p className="mt-2 text-xs text-warn">{actionMessage}</p>
+          ) : null}
         </div>
         {zoomedSessionId ? (
           <button
@@ -275,26 +301,28 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
             />
 
             {entityNodes.map(({ placement, x, y }) => (
-              <Link
+              <div
                 key={`${placement.entityId}-${placement.fromSessionId}`}
-                href={`/campaigns/${campaignId}/entities/${placement.entityId}`}
                 className="group absolute z-10 -translate-x-1/2 -translate-y-1/2"
                 style={{ left: x, top: y }}
-                draggable={false}
-                onClick={(event) => {
-                  if (guardClick(event)) return;
-                }}
                 onMouseEnter={() => setHoveredEntityId(placement.entityId)}
                 onMouseLeave={() => setHoveredEntityId(null)}
               >
                 <div
-                  className={`w-36 overflow-hidden rounded-xl border shadow-[0_0_20px_-10px_rgba(255,180,70,0.7)] transition duration-200 ${
+                  className={`w-40 overflow-hidden rounded-xl border shadow-[0_0_20px_-10px_rgba(255,180,70,0.7)] transition duration-200 ${
                     hoveredEntityId === placement.entityId
-                      ? "-translate-y-1 border-[#f0c56d] bg-[#2a1c10]"
+                      ? "scale-105 border-[#f0c56d] bg-[#2a1c10]"
                       : "border-[#c49a55]/40 bg-[#17100b]/95"
                   }`}
                 >
-                  <div className="flex gap-2 p-2">
+                  <Link
+                    href={`/campaigns/${campaignId}/entities/${placement.entityId}`}
+                    className="flex gap-2 p-2"
+                    draggable={false}
+                    onClick={(event) => {
+                      if (guardClick(event)) return;
+                    }}
+                  >
                     <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-[#2b1d12]">
                       {placement.imagePath ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -319,9 +347,60 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
                         {placement.role || placement.type}
                       </p>
                     </div>
+                  </Link>
+                  <div
+                    className="flex items-center gap-1 border-t border-[#c49a55]/20 px-2 py-1.5"
+                    onPointerDown={(event) => event.stopPropagation()}
+                  >
+                    <RiverControl
+                      label="Move left"
+                      disabled={pending}
+                      onClick={() =>
+                        runRiverAction(() =>
+                          moveEntityOnRiverAction(
+                            campaignId,
+                            placement.entityId,
+                            "left",
+                          ),
+                        )
+                      }
+                    >
+                      ←
+                    </RiverControl>
+                    <RiverControl
+                      label="Move right"
+                      disabled={pending}
+                      onClick={() =>
+                        runRiverAction(() =>
+                          moveEntityOnRiverAction(
+                            campaignId,
+                            placement.entityId,
+                            "right",
+                          ),
+                        )
+                      }
+                    >
+                      →
+                    </RiverControl>
+                    <RiverControl
+                      label="Delete ID card"
+                      danger
+                      disabled={pending}
+                      onClick={() => {
+                        if (!confirmDelete(`ID card “${placement.name}”`)) return;
+                        runRiverAction(() =>
+                          deleteEntityFromFateAction(
+                            campaignId,
+                            placement.entityId,
+                          ),
+                        );
+                      }}
+                    >
+                      ⌫
+                    </RiverControl>
                   </div>
                 </div>
-              </Link>
+              </div>
             ))}
 
             {sessionNodes.map((node) => {
@@ -329,7 +408,7 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
               return (
                 <div
                   key={node.session.id}
-                  className={`absolute z-20 w-48 origin-center -translate-x-1/2 -translate-y-1/2 rounded-2xl border px-4 py-3 text-left shadow-[0_0_34px_-14px_rgba(255,170,60,0.8)] transition duration-300 ${
+                  className={`absolute z-20 w-52 origin-center -translate-x-1/2 -translate-y-1/2 rounded-2xl border text-left shadow-[0_0_34px_-14px_rgba(255,170,60,0.8)] transition duration-300 ${
                     isZoomed
                       ? "scale-105 border-[#f0c56d] bg-[#24180f]"
                       : "border-[#c49a55]/40 bg-[#17100b]/95 hover:scale-105 hover:border-[#e2b56a]"
@@ -338,7 +417,7 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
                 >
                   <button
                     type="button"
-                    className="w-full text-left"
+                    className="w-full px-4 pt-3 pb-2 text-left"
                     onClick={(event) => {
                       if (guardClick(event)) return;
                       setZoomedSessionId(isZoomed ? null : node.session.id);
@@ -361,17 +440,70 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
                       </p>
                     ) : null}
                   </button>
-                  {isZoomed ? (
-                    <Link
-                      href={`/campaigns/${campaignId}/sessions/${node.session.id}`}
-                      className="mt-3 inline-block text-xs font-medium text-[#f0c56d] underline-offset-2 hover:underline"
-                      onClick={(event) => {
-                        if (guardClick(event)) return;
+                  <div
+                    className="flex items-center gap-1 border-t border-[#c49a55]/20 px-3 py-2"
+                    onPointerDown={(event) => event.stopPropagation()}
+                  >
+                    <RiverControl
+                      label="Move left"
+                      disabled={pending}
+                      onClick={() =>
+                        runRiverAction(() =>
+                          moveGameSessionAction(
+                            campaignId,
+                            node.session.id,
+                            "left",
+                          ),
+                        )
+                      }
+                    >
+                      ←
+                    </RiverControl>
+                    <RiverControl
+                      label="Move right"
+                      disabled={pending}
+                      onClick={() =>
+                        runRiverAction(() =>
+                          moveGameSessionAction(
+                            campaignId,
+                            node.session.id,
+                            "right",
+                          ),
+                        )
+                      }
+                    >
+                      →
+                    </RiverControl>
+                    <RiverControl
+                      label="Delete session"
+                      danger
+                      disabled={pending}
+                      onClick={() => {
+                        if (!confirmDelete(`session “${node.session.title}”`)) {
+                          return;
+                        }
+                        runRiverAction(() =>
+                          deleteGameSessionFromFateAction(
+                            campaignId,
+                            node.session.id,
+                          ),
+                        );
                       }}
                     >
-                      Open session notes →
-                    </Link>
-                  ) : null}
+                      ⌫
+                    </RiverControl>
+                    {isZoomed ? (
+                      <Link
+                        href={`/campaigns/${campaignId}/sessions/${node.session.id}`}
+                        className="ml-auto text-[11px] font-medium text-[#f0c56d] underline-offset-2 hover:underline"
+                        onClick={(event) => {
+                          if (guardClick(event)) return;
+                        }}
+                      >
+                        Open →
+                      </Link>
+                    ) : null}
+                  </div>
                 </div>
               );
             })}
@@ -379,5 +511,39 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
         </div>
       </div>
     </div>
+  );
+}
+
+function RiverControl({
+  children,
+  label,
+  onClick,
+  disabled,
+  danger,
+}: {
+  children: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      disabled={disabled}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      className={`rounded-md px-2 py-1 text-xs disabled:opacity-40 ${
+        danger
+          ? "border border-[#8a3b2b]/50 text-[#e8a090] hover:border-[#c45a45]"
+          : "border border-[#c49a55]/35 text-[#f0d9a8] hover:border-[#e2b56a]"
+      }`}
+    >
+      {children}
+    </button>
   );
 }

@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, max } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "./db";
@@ -271,12 +271,17 @@ export async function createGameSessionAction(
   }
 
   const id = createId("ses");
+  const [maxRow] = await db
+    .select({ value: max(gameSessions.sortOrder) })
+    .from(gameSessions)
+    .where(eq(gameSessions.campaignId, campaignId));
   await db.insert(gameSessions).values({
     id,
     campaignId,
     title,
     sessionDate: sessionDate || null,
     outline,
+    sortOrder: (maxRow?.value ?? -1) + 1,
     createdBy: session.user.id,
     updatedBy: session.user.id,
   });
@@ -348,7 +353,7 @@ export async function listCampaignGameSessions(campaignId: string) {
     .select()
     .from(gameSessions)
     .where(eq(gameSessions.campaignId, campaignId))
-    .orderBy(desc(gameSessions.updatedAt));
+    .orderBy(asc(gameSessions.sortOrder), asc(gameSessions.createdAt));
 }
 
 export async function getCampaignById(campaignId: string) {

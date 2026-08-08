@@ -4,6 +4,7 @@ import {
   getGameSession,
   updateGameSessionAction,
 } from "@/lib/actions";
+import { deleteGameSessionAction } from "@/lib/fate-actions";
 import { requireCampaignMember } from "@/lib/session";
 import { CampaignNav } from "@/components/campaign-nav";
 import { SiteHeader } from "@/components/site-header";
@@ -22,6 +23,11 @@ export default async function SessionDetailPage({
   async function action(formData: FormData) {
     "use server";
     await updateGameSessionAction(id, sessionId, formData);
+  }
+
+  async function deleteAction() {
+    "use server";
+    await deleteGameSessionAction(id, sessionId);
   }
 
   return (
@@ -64,6 +70,18 @@ export default async function SessionDetailPage({
               defaultValue={gameSession.outline}
             />
             <Button>Save notes</Button>
+          </form>
+          <form action={deleteAction} className="mt-6 border-t border-line pt-4">
+            <p className="text-xs text-ink-soft">
+              Deleting removes this session from the Fate river and its
+              appearance links.
+            </p>
+            <button
+              type="submit"
+              className="mt-3 rounded-lg border border-warn/40 px-4 py-2 text-sm text-warn hover:bg-warn/10"
+            >
+              Delete session
+            </button>
           </form>
         </Panel>
       </main>

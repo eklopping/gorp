@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, desc, eq, like, or } from "drizzle-orm";
+import { and, asc, desc, eq, like, max, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "./db";
@@ -114,6 +114,17 @@ export async function createEntityAction(
   }
 
   const id = createId("ent");
+  const [maxRow] = await db
+    .select({ value: max(entities.sortOrder) })
+    .from(entities)
+    .where(eq(entities.campaignId, campaignId));
+  const [latestSession] = await db
+    .select({ id: gameSessions.id })
+    .from(gameSessions)
+    .where(eq(gameSessions.campaignId, campaignId))
+    .orderBy(desc(gameSessions.sortOrder), desc(gameSessions.createdAt))
+    .limit(1);
+
   await db.insert(entities).values({
     id,
     campaignId,
@@ -124,6 +135,8 @@ export async function createEntityAction(
     description,
     itemsOfInterest,
     imagePath,
+    riverSessionId: latestSession?.id ?? null,
+    sortOrder: (maxRow?.value ?? -1) + 1,
     createdBy: session.user.id,
     updatedBy: session.user.id,
   });
