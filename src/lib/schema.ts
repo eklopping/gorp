@@ -105,9 +105,7 @@ export const entities = sqliteTable("entities", {
   itemsOfInterest: text("items_of_interest").notNull().default(""),
   imagePath: text("image_path"),
   /** Session strand the ID card sits after on the Fate river. */
-  riverSessionId: text("river_session_id").references(() => gameSessions.id, {
-    onDelete: "set null",
-  }),
+  riverSessionId: text("river_session_id"),
   sortOrder: integer("sort_order").notNull().default(0),
   createdBy: text("created_by")
     .notNull()
