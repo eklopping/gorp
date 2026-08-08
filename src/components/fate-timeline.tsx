@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { FateRiverCanvas } from "@/components/fate-river-canvas";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  FateRiverCanvas,
+  type FateQuality,
+} from "@/components/fate-river-canvas";
 import type { FateEntityPlacement, FateSession } from "@/lib/fate-timeline";
 import { uploadUrl } from "@/lib/upload-url";
 
@@ -10,6 +13,7 @@ const SESSION_GAP = 460;
 const PAD_X = 160;
 const HEIGHT = 640;
 const MAIN_Y = 320;
+const QUALITY_KEY = "gorp-fate-quality";
 
 type Props = {
   campaignId: string;
@@ -31,9 +35,26 @@ function branchGeometry(x: number, upward: boolean) {
   return { tipX, tipY, upward, x };
 }
 
+function readStoredQuality(): FateQuality {
+  if (typeof window === "undefined") return "balanced";
+  const value = window.localStorage.getItem(QUALITY_KEY);
+  if (value === "high" || value === "balanced" || value === "low") return value;
+  return "balanced";
+}
+
 export function FateTimeline({ campaignId, sessions, placements }: Props) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef({ left: 0, width: 900 });
   const [zoomedSessionId, setZoomedSessionId] = useState<string | null>(null);
   const [hoveredEntityId, setHoveredEntityId] = useState<string | null>(null);
+  const [quality, setQuality] = useState<FateQuality>("balanced");
+
+  useEffect(() => {
+    setQuality(readStoredQuality());
+    const node = scrollerRef.current;
+    if (!node) return;
+    viewRef.current = { left: node.scrollLeft, width: node.clientWidth };
+  }, []);
 
   const width = Math.max(
     980,
@@ -62,30 +83,32 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
     [sessionNodes],
   );
 
-  const entityNodes = useMemo(
-    () =>
-      placements.map((placement, order) => {
-        const from = sessionNodes[placement.fromSessionIndex];
-        const next = sessionNodes[placement.fromSessionIndex + 1];
-        const startX = from?.x ?? PAD_X;
-        const endX = next?.x ?? startX + SESSION_GAP * 0.75;
-        const siblings = placements.filter(
-          (other) => other.fromSessionIndex === placement.fromSessionIndex,
-        );
-        const siblingIndex = siblings.findIndex(
-          (other) =>
-            other.entityId === placement.entityId &&
-            other.fromSessionId === placement.fromSessionId,
-        );
-        const t = (siblingIndex + 1) / (siblings.length + 1);
-        const x = startX + (endX - startX) * t;
-        const y =
-          waveY(x) +
-          ((order % 2 === 0 ? -1 : 1) * 42 + (siblingIndex % 3) * 10);
-        return { placement, x, y };
-      }),
-    [placements, sessionNodes],
-  );
+  const entityNodes = useMemo(() => {
+    const siblingCounts = new Map<number, FateEntityPlacement[]>();
+    for (const placement of placements) {
+      const list = siblingCounts.get(placement.fromSessionIndex) ?? [];
+      list.push(placement);
+      siblingCounts.set(placement.fromSessionIndex, list);
+    }
+
+    return placements.map((placement, order) => {
+      const from = sessionNodes[placement.fromSessionIndex];
+      const next = sessionNodes[placement.fromSessionIndex + 1];
+      const startX = from?.x ?? PAD_X;
+      const endX = next?.x ?? startX + SESSION_GAP * 0.75;
+      const siblings = siblingCounts.get(placement.fromSessionIndex) ?? [];
+      const siblingIndex = siblings.findIndex(
+        (other) =>
+          other.entityId === placement.entityId &&
+          other.fromSessionId === placement.fromSessionId,
+      );
+      const t = (siblingIndex + 1) / (siblings.length + 1);
+      const x = startX + (endX - startX) * t;
+      const y =
+        waveY(x) + ((order % 2 === 0 ? -1 : 1) * 42 + (siblingIndex % 3) * 10);
+      return { placement, x, y };
+    });
+  }, [placements, sessionNodes]);
 
   const zoomed = sessionNodes.find(
     (node) => node.session.id === zoomedSessionId,
@@ -93,13 +116,18 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
 
   const canvasStyle = zoomed
     ? {
-        transform: `translate(${440 - zoomed.tipX}px, ${310 - zoomed.tipY}px) scale(1.7)`,
+        transform: `translate(${440 - zoomed.tipX}px, ${310 - zoomed.tipY}px) scale(1.55)`,
         transformOrigin: `${zoomed.tipX}px ${zoomed.tipY}px`,
       }
     : {
         transform: "translate(0px, 0px) scale(1)",
         transformOrigin: "center center",
       };
+
+  function updateQuality(next: FateQuality) {
+    setQuality(next);
+    window.localStorage.setItem(QUALITY_KEY, next);
+  }
 
   if (sessions.length === 0) {
     return (
@@ -123,23 +151,51 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
             and the next.
           </p>
         </div>
-        {zoomedSessionId ? (
-          <button
-            type="button"
-            onClick={() => setZoomedSessionId(null)}
-            className="rounded-lg border border-[#c49a55]/40 bg-[#1a120a]/80 px-4 py-2 text-sm text-[#f0d9a8] hover:border-[#e2b56a]"
-          >
-            Zoom out
-          </button>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 text-xs text-[#b9a07a]">
+            Quality
+            <select
+              value={quality}
+              onChange={(event) =>
+                updateQuality(event.target.value as FateQuality)
+              }
+              className="rounded-md border border-[#c49a55]/35 bg-[#1a120a] px-2 py-1.5 text-[#f0d9a8]"
+            >
+              <option value="low">Low</option>
+              <option value="balanced">Balanced</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+          {zoomedSessionId ? (
+            <button
+              type="button"
+              onClick={() => setZoomedSessionId(null)}
+              className="rounded-lg border border-[#c49a55]/40 bg-[#1a120a]/80 px-4 py-2 text-sm text-[#f0d9a8] hover:border-[#e2b56a]"
+            >
+              Zoom out
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div
-        className="fate-scroll relative overflow-x-scroll overflow-y-hidden rounded-2xl border border-[#3a2a16] shadow-[0_0_80px_-20px_rgba(255,150,40,0.35)]"
+        ref={scrollerRef}
+        className="fate-scroll relative overflow-x-scroll overflow-y-hidden rounded-2xl border border-[#3a2a16] bg-[#070504] shadow-[0_0_80px_-20px_rgba(255,150,40,0.35)]"
         style={{ height: HEIGHT }}
+        onScroll={(event) => {
+          const node = event.currentTarget;
+          viewRef.current = {
+            left: node.scrollLeft,
+            width: node.clientWidth,
+          };
+        }}
       >
         <div
-          className="fate-canvas relative transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,140,40,0.12),transparent_58%)]"
+          aria-hidden
+        />
+        <div
+          className="fate-canvas relative transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
           style={{ width, height: HEIGHT, ...canvasStyle }}
         >
           <FateRiverCanvas
@@ -147,6 +203,8 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
             height={HEIGHT}
             mainY={MAIN_Y}
             branches={branches}
+            quality={quality}
+            viewRef={viewRef}
           />
 
           {entityNodes.map(({ placement, x, y }) => (
@@ -159,10 +217,10 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
               onMouseLeave={() => setHoveredEntityId(null)}
             >
               <div
-                className={`w-36 overflow-hidden rounded-xl border shadow-[0_0_24px_-8px_rgba(255,180,70,0.55)] backdrop-blur-md transition duration-300 ${
+                className={`w-36 overflow-hidden rounded-xl border shadow-[0_0_20px_-10px_rgba(255,180,70,0.7)] transition duration-200 ${
                   hoveredEntityId === placement.entityId
-                    ? "-translate-y-1 border-[#f0c56d] bg-[#2a1c10]/92"
-                    : "border-[#c49a55]/35 bg-[#140e09]/82"
+                    ? "-translate-y-1 border-[#f0c56d] bg-[#2a1c10]"
+                    : "border-[#c49a55]/40 bg-[#17100b]/95"
                 }`}
               >
                 <div className="flex gap-2 p-2">
@@ -173,6 +231,7 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
                         src={uploadUrl(placement.imagePath)}
                         alt=""
                         className="h-full w-full object-cover"
+                        loading="lazy"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-wider text-[#c9ae7d]">
@@ -198,10 +257,10 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
             return (
               <div
                 key={node.session.id}
-                className={`absolute z-20 w-48 -translate-x-1/2 -translate-y-1/2 rounded-2xl border px-4 py-3 text-left shadow-[0_0_40px_-12px_rgba(255,170,60,0.65)] backdrop-blur-md transition duration-500 ${
+                className={`absolute z-20 w-48 -translate-x-1/2 -translate-y-1/2 rounded-2xl border px-4 py-3 text-left shadow-[0_0_34px_-14px_rgba(255,170,60,0.8)] transition duration-300 ${
                   isZoomed
-                    ? "border-[#f0c56d] bg-[#2a1c10]/95"
-                    : "border-[#c49a55]/35 bg-[#140e09]/86 hover:-translate-y-1 hover:border-[#e2b56a]"
+                    ? "border-[#f0c56d] bg-[#24180f]"
+                    : "border-[#c49a55]/40 bg-[#17100b]/95 hover:-translate-y-1 hover:border-[#e2b56a]"
                 }`}
                 style={{ left: node.tipX, top: node.tipY }}
               >
