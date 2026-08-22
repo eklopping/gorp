@@ -192,6 +192,8 @@ export async function patchLiveDocAction(input: {
   docId: string;
   expectedUpdatedAt: number;
   patch: Record<string, string>;
+  /** When true, overwrite even if expectedUpdatedAt is stale (active editor wins). */
+  force?: boolean;
 }): Promise<LiveDocPatchResult> {
   const { session } = await requireCampaignMember(input.campaignId);
   const editors = touchPresence(
@@ -209,6 +211,7 @@ export async function patchLiveDocAction(input: {
     );
     if (!current.ok) return current;
     if (
+      !input.force &&
       input.expectedUpdatedAt > 0 &&
       current.updatedAt !== input.expectedUpdatedAt
     ) {
@@ -216,15 +219,16 @@ export async function patchLiveDocAction(input: {
         ...current,
         conflict: true,
         message: current.updatedByName
-          ? `${current.updatedByName} saved a newer version — loaded their changes.`
-          : "A newer version was saved — loaded the latest notes.",
+          ? `${current.updatedByName} saved a newer version.`
+          : "A newer version was saved elsewhere.",
       };
     }
 
     const title = (input.patch.title ?? current.fields.title).trim();
     if (!title) return { ok: false, error: "Title is required." };
-    const sessionDate = (input.patch.sessionDate ?? current.fields.sessionDate)
-      .trim();
+    const sessionDate = (
+      input.patch.sessionDate ?? current.fields.sessionDate
+    ).trim();
     const outline = input.patch.outline ?? current.fields.outline;
 
     await db
@@ -243,7 +247,7 @@ export async function patchLiveDocAction(input: {
         ),
       );
 
-    revalidatePath(`/campaigns/${input.campaignId}/sessions/${input.docId}`);
+    // Avoid revalidating the open editor page — that remounts the client and drops keystrokes.
     revalidatePath(`/campaigns/${input.campaignId}`);
     revalidatePath(`/campaigns/${input.campaignId}/fate`);
 
@@ -257,6 +261,7 @@ export async function patchLiveDocAction(input: {
   );
   if (!current.ok) return current;
   if (
+    !input.force &&
     input.expectedUpdatedAt > 0 &&
     current.updatedAt !== input.expectedUpdatedAt
   ) {
@@ -264,8 +269,8 @@ export async function patchLiveDocAction(input: {
       ...current,
       conflict: true,
       message: current.updatedByName
-        ? `${current.updatedByName} saved a newer version — loaded their changes.`
-        : "A newer version was saved — loaded the latest ID card.",
+        ? `${current.updatedByName} saved a newer version.`
+        : "A newer version was saved elsewhere.",
     };
   }
 
@@ -291,7 +296,6 @@ export async function patchLiveDocAction(input: {
       ),
     );
 
-  revalidatePath(`/campaigns/${input.campaignId}/entities/${input.docId}`);
   revalidatePath(`/campaigns/${input.campaignId}/entities`);
   revalidatePath(`/campaigns/${input.campaignId}/fate`);
 

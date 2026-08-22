@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useEffectEvent,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import {
   FormatButton,
   prefixLines,
@@ -41,8 +35,16 @@ type Props = {
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
 
-const SAVE_DEBOUNCE_MS = 700;
-const POLL_MS = 2500;
+const SAVE_DEBOUNCE_MS = 900;
+const POLL_MS = 4000;
+
+function fieldsEqual(a: Record<string, string>, b: Record<string, string>) {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const key of keys) {
+    if ((a[key] ?? "") !== (b[key] ?? "")) return false;
+  }
+  return true;
+}
 
 export function LiveDocEditor({
   campaignId,
@@ -61,54 +63,100 @@ export function LiveDocEditor({
   );
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [message, setMessage] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-  const dirtyRef = useRef(false);
+
   const valuesRef = useRef(values);
   const updatedAtRef = useRef(updatedAt);
+  const dirtyRef = useRef(false);
+  const savingRef = useRef(false);
+  const editEpochRef = useRef(0);
+  const savedEpochRef = useRef(0);
+  const debounceRef = useRef<number | null>(null);
   const textRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
   valuesRef.current = values;
   updatedAtRef.current = updatedAt;
 
-  function applySnapshot(fieldsNext: Record<string, string>, at: number, by: string | null) {
-    setValues(fieldsNext);
-    valuesRef.current = fieldsNext;
-    setUpdatedAt(at);
-    updatedAtRef.current = at;
-    setUpdatedByName(by);
-    dirtyRef.current = false;
-  }
+  const clearDebounce = () => {
+    if (debounceRef.current !== null) {
+      window.clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+  };
 
-  const saveNow = useEffectEvent(async () => {
-    if (!dirtyRef.current) return;
+  const scheduleSave = useEffectEvent((delay = SAVE_DEBOUNCE_MS) => {
+    clearDebounce();
+    debounceRef.current = window.setTimeout(() => {
+      debounceRef.current = null;
+      void flushSave(false);
+    }, delay);
+  });
+
+  const flushSave = useEffectEvent(async (force = false) => {
+    if (savingRef.current) return;
+    if (!dirtyRef.current && !force) return;
+
+    const epochAtStart = editEpochRef.current;
+    const patch = { ...valuesRef.current };
+    const expectedUpdatedAt = updatedAtRef.current;
+
+    savingRef.current = true;
     setSaveState("saving");
     setMessage(null);
-    const result = await patchLiveDocAction({
-      campaignId,
-      docType,
-      docId,
-      expectedUpdatedAt: updatedAtRef.current,
-      patch: valuesRef.current,
-    });
-    if (!result.ok) {
-      setSaveState("error");
-      setMessage(result.error);
-      return;
-    }
-    if ("conflict" in result && result.conflict) {
-      applySnapshot(result.fields, result.updatedAt, result.updatedByName);
+
+    try {
+      let result = await patchLiveDocAction({
+        campaignId,
+        docType,
+        docId,
+        expectedUpdatedAt,
+        patch,
+      });
+
+      // Active editor wins: if someone else saved while we typed, rewrite with our buffer.
+      if (result.ok && "conflict" in result && result.conflict) {
+        result = await patchLiveDocAction({
+          campaignId,
+          docType,
+          docId,
+          expectedUpdatedAt: result.updatedAt,
+          patch: valuesRef.current,
+          force: true,
+        });
+      }
+
+      if (!result.ok) {
+        setSaveState("error");
+        setMessage(result.error);
+        return;
+      }
+
       setEditors(result.editors);
-      setSaveState("saved");
-      setMessage(result.message);
-      return;
+      setUpdatedAt(result.updatedAt);
+      updatedAtRef.current = result.updatedAt;
+      setUpdatedByName(result.updatedByName);
+
+      // Only clear dirty if nothing newer was typed during the request.
+      if (editEpochRef.current === epochAtStart) {
+        dirtyRef.current = false;
+        savedEpochRef.current = epochAtStart;
+        setSaveState("saved");
+        setMessage(null);
+      } else {
+        dirtyRef.current = true;
+        setSaveState("dirty");
+        scheduleSave(400);
+      }
+    } catch {
+      setSaveState("error");
+      setMessage("Couldn’t save — retrying…");
+      scheduleSave(1200);
+    } finally {
+      savingRef.current = false;
     }
-    applySnapshot(result.fields, result.updatedAt, result.updatedByName);
-    setEditors(result.editors);
-    setSaveState("saved");
   });
 
   const pollRemote = useEffectEvent(async () => {
-    if (dirtyRef.current || pending) return;
+    if (dirtyRef.current || savingRef.current) return;
     const result = await getLiveDocSnapshotAction({
       campaignId,
       docType,
@@ -116,25 +164,29 @@ export function LiveDocEditor({
     });
     if (!result.ok) return;
     setEditors(result.editors);
-    if (result.updatedAt !== updatedAtRef.current) {
-      applySnapshot(result.fields, result.updatedAt, result.updatedByName);
-      setSaveState("saved");
-      setMessage(
-        result.updatedByName
-          ? `Updated live from ${result.updatedByName}`
-          : "Updated from another editor",
-      );
+    if (result.updatedAt === updatedAtRef.current) return;
+    if (dirtyRef.current || savingRef.current) return;
+    if (fieldsEqual(result.fields, valuesRef.current)) {
+      setUpdatedAt(result.updatedAt);
+      updatedAtRef.current = result.updatedAt;
+      setUpdatedByName(result.updatedByName);
+      return;
     }
+
+    setValues(result.fields);
+    valuesRef.current = result.fields;
+    setUpdatedAt(result.updatedAt);
+    updatedAtRef.current = result.updatedAt;
+    setUpdatedByName(result.updatedByName);
+    setSaveState("saved");
+    setMessage(
+      result.updatedByName
+        ? `Updated live from ${result.updatedByName}`
+        : "Updated from another editor",
+    );
   });
 
   useEffect(() => {
-    const saveTimer = window.setInterval(() => {
-      if (!dirtyRef.current) return;
-      startTransition(() => {
-        void saveNow();
-      });
-    }, SAVE_DEBOUNCE_MS);
-
     const pollTimer = window.setInterval(() => {
       void pollRemote();
     }, POLL_MS);
@@ -145,7 +197,7 @@ export function LiveDocEditor({
           if (result.ok) setEditors(result.editors);
         },
       );
-    }, 8000);
+    }, 10000);
 
     void heartbeatLiveDocAction({ campaignId, docType, docId }).then(
       (result) => {
@@ -154,29 +206,38 @@ export function LiveDocEditor({
     );
 
     return () => {
-      window.clearInterval(saveTimer);
       window.clearInterval(pollTimer);
       window.clearInterval(beatTimer);
+      clearDebounce();
       if (dirtyRef.current) {
-        void saveNow();
+        void flushSave(true);
       }
     };
   }, [campaignId, docType, docId]);
 
   useEffect(() => {
     function onLeave() {
-      if (dirtyRef.current) void saveNow();
+      if (dirtyRef.current) void flushSave(true);
+    }
+    function onVisibility() {
+      if (document.visibilityState === "hidden") onLeave();
     }
     window.addEventListener("beforeunload", onLeave);
-    return () => window.removeEventListener("beforeunload", onLeave);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("beforeunload", onLeave);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, []);
 
   function markDirty(next: Record<string, string>) {
     setValues(next);
     valuesRef.current = next;
     dirtyRef.current = true;
+    editEpochRef.current += 1;
     setSaveState("dirty");
     setMessage(null);
+    scheduleSave();
   }
 
   function updateField(key: string, value: string) {
@@ -209,19 +270,19 @@ export function LiveDocEditor({
     saveState === "saving"
       ? "Saving…"
       : saveState === "dirty"
-        ? "Editing…"
+        ? "Unsaved changes"
         : saveState === "error"
           ? "Save failed"
           : saveState === "saved"
-            ? "Saved"
-            : "Live sync on";
+            ? "All changes saved"
+            : "Ready";
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-paper-deep/30 px-3 py-2 text-xs">
         <div className="flex flex-wrap items-center gap-2 text-ink-soft">
           <span
-            className={`inline-flex h-2 w-2 rounded-full ${
+            className={`inline-flex h-2 w-2 rounded-full transition-colors ${
               saveState === "error"
                 ? "bg-warn"
                 : saveState === "dirty" || saveState === "saving"
@@ -338,10 +399,13 @@ export function LiveDocEditor({
                 value={value}
                 rows={field.rows ?? 10}
                 onChange={(event) => updateField(field.key, event.target.value)}
+                onBlur={() => {
+                  if (dirtyRef.current) void flushSave(true);
+                }}
                 className="mt-1.5 w-full resize-y rounded-lg border border-line bg-paper-deep/40 px-3 py-2 text-ink outline-none transition focus:border-accent focus:bg-paper"
               />
               <span className="mt-1 block text-[11px] text-ink-soft">
-                Markdown formatting · autosaves for the whole table
+                Autosaves after you pause typing · blur also saves
               </span>
             </label>
           );
@@ -355,6 +419,9 @@ export function LiveDocEditor({
               required={field.required}
               value={value}
               onChange={(event) => updateField(field.key, event.target.value)}
+              onBlur={() => {
+                if (dirtyRef.current) void flushSave(true);
+              }}
               className="mt-1.5 w-full rounded-lg border border-line bg-paper-deep/40 px-3 py-2 text-ink outline-none transition focus:border-accent focus:bg-paper"
             />
           </label>
@@ -363,12 +430,10 @@ export function LiveDocEditor({
 
       <button
         type="button"
-        disabled={pending || saveState === "saving"}
+        disabled={saveState === "saving"}
         onClick={() => {
           dirtyRef.current = true;
-          startTransition(() => {
-            void saveNow();
-          });
+          void flushSave(true);
         }}
         className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-paper hover:bg-accent-deep disabled:opacity-50"
       >
