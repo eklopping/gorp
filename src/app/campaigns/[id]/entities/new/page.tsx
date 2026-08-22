@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CampaignNav } from "@/components/campaign-nav";
+import { MarkdownField } from "@/components/markdown-field";
 import { SiteHeader } from "@/components/site-header";
 import { Button, Field, Panel } from "@/components/ui";
 import { createEntityAction } from "@/lib/entity-actions";
@@ -52,17 +53,15 @@ export default async function NewEntityPage({
             <Field label="Name" name="name" required placeholder="Mira of the Docks" />
             <Field label="Role" name="role" placeholder="Informant, harbor master, ruined temple…" />
             <Field label="Allegiance" name="allegiance" placeholder="City watch, no banner, the Ash Court…" />
-            <Field
+            <MarkdownField
               label="Description"
               name="description"
-              as="textarea"
               rows={5}
               placeholder="What the table should remember at a glance"
             />
-            <Field
+            <MarkdownField
               label="Items of interest"
               name="itemsOfInterest"
-              as="textarea"
               rows={3}
               placeholder="Relics, rumors, goods, secrets… (especially useful for places)"
             />

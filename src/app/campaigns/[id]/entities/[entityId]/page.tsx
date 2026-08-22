@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CampaignNav } from "@/components/campaign-nav";
+import { LiveDocEditor } from "@/components/live-doc-editor";
 import { SiteHeader } from "@/components/site-header";
 import { Button, Field, Panel } from "@/components/ui";
 import { listCampaignGameSessions } from "@/lib/actions";
@@ -8,7 +9,7 @@ import {
   addEntityAppearanceAction,
   getEntity,
   listEntityAppearances,
-  updateEntityAction,
+  updateEntityPortraitAction,
 } from "@/lib/entity-actions";
 import { deleteEntityAction } from "@/lib/fate-actions";
 import { requireCampaignMember } from "@/lib/session";
@@ -27,9 +28,9 @@ export default async function EntityDetailPage({
   const appearances = await listEntityAppearances(entityId);
   const sessions = await listCampaignGameSessions(id);
 
-  async function saveAction(formData: FormData) {
+  async function portraitAction(formData: FormData) {
     "use server";
-    await updateEntityAction(id, entityId, formData);
+    await updateEntityPortraitAction(id, entityId, formData);
   }
 
   async function appearanceAction(formData: FormData) {
@@ -78,35 +79,51 @@ export default async function EntityDetailPage({
                 <h1 className="font-[family-name:var(--font-display)] text-4xl tracking-tight">
                   {entity.name}
                 </h1>
+                <p className="mt-1 text-sm text-ink-soft">
+                  Text fields autosave live for the table. Portrait still uses
+                  Save below.
+                </p>
               </div>
             </div>
 
+            <div className="mt-6">
+              <LiveDocEditor
+                campaignId={id}
+                docType="entity"
+                docId={entityId}
+                initialUpdatedAt={entity.updatedAt.getTime()}
+                initialFields={{
+                  name: entity.name,
+                  role: entity.role,
+                  allegiance: entity.allegiance,
+                  description: entity.description,
+                  itemsOfInterest: entity.itemsOfInterest,
+                }}
+                fields={[
+                  { key: "name", label: "Name", kind: "text", required: true },
+                  { key: "role", label: "Role", kind: "text" },
+                  { key: "allegiance", label: "Allegiance", kind: "text" },
+                  {
+                    key: "description",
+                    label: "Description",
+                    kind: "markdown",
+                    rows: 8,
+                  },
+                  {
+                    key: "itemsOfInterest",
+                    label: "Items of interest",
+                    kind: "markdown",
+                    rows: 4,
+                  },
+                ]}
+              />
+            </div>
+
             <form
-              action={saveAction}
-              className="mt-6 space-y-4"
+              action={portraitAction}
+              className="mt-6 space-y-3 border-t border-line pt-4"
               encType="multipart/form-data"
             >
-              <Field label="Name" name="name" required defaultValue={entity.name} />
-              <Field label="Role" name="role" defaultValue={entity.role} />
-              <Field
-                label="Allegiance"
-                name="allegiance"
-                defaultValue={entity.allegiance}
-              />
-              <Field
-                label="Description"
-                name="description"
-                as="textarea"
-                rows={6}
-                defaultValue={entity.description}
-              />
-              <Field
-                label="Items of interest"
-                name="itemsOfInterest"
-                as="textarea"
-                rows={3}
-                defaultValue={entity.itemsOfInterest}
-              />
               <label className="block text-sm text-ink-soft">
                 <span className="font-medium text-ink">Replace portrait</span>
                 <input
@@ -116,21 +133,22 @@ export default async function EntityDetailPage({
                   className="mt-1.5 block w-full text-sm"
                 />
               </label>
-                <Button>Save ID card</Button>
-              </form>
-              <form action={deleteAction} className="mt-4 border-t border-line pt-4">
-                <p className="text-xs text-ink-soft">
-                  Deleting removes this card from the campaign, maps, and Fate
-                  river.
-                </p>
-                <button
-                  type="submit"
-                  className="mt-3 rounded-lg border border-warn/40 px-4 py-2 text-sm text-warn hover:bg-warn/10"
-                >
-                  Delete ID card
-                </button>
-              </form>
-            </Panel>
+              <Button>Save portrait</Button>
+            </form>
+
+            <form action={deleteAction} className="mt-4 border-t border-line pt-4">
+              <p className="text-xs text-ink-soft">
+                Deleting removes this card from the campaign, maps, and Fate
+                river.
+              </p>
+              <button
+                type="submit"
+                className="mt-3 rounded-lg border border-warn/40 px-4 py-2 text-sm text-warn hover:bg-warn/10"
+              >
+                Delete ID card
+              </button>
+            </form>
+          </Panel>
 
           <div className="space-y-4">
             <Panel>
@@ -158,9 +176,7 @@ export default async function EntityDetailPage({
                       </Link>
                       <p className="text-xs text-ink-soft">
                         {appearance.sessionDate || "No date"}
-                        {appearance.mapId
-                          ? ` · pinned on map`
-                          : ""}
+                        {appearance.mapId ? ` · pinned on map` : ""}
                       </p>
                       {appearance.note ? (
                         <p className="mt-1 text-sm text-ink-soft">

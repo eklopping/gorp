@@ -3,6 +3,7 @@ import { createGameSessionAction } from "@/lib/actions";
 import { requireCampaignMember } from "@/lib/session";
 import { CampaignNav } from "@/components/campaign-nav";
 import { SiteHeader } from "@/components/site-header";
+import { MarkdownField } from "@/components/markdown-field";
 import { Button, Field, Panel } from "@/components/ui";
 
 export default async function NewSessionPage({
@@ -45,10 +46,9 @@ export default async function NewSessionPage({
               placeholder="Session 3 — The drowned market"
             />
             <Field label="Session date" name="sessionDate" type="date" />
-            <Field
+            <MarkdownField
               label="Outline"
               name="outline"
-              as="textarea"
               rows={12}
               placeholder="What happened, who they met, where they went…"
             />

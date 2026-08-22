@@ -6,6 +6,7 @@ import {
 } from "@/lib/actions";
 import { requireCampaignMember } from "@/lib/session";
 import { CampaignNav } from "@/components/campaign-nav";
+import { MarkdownView } from "@/components/markdown-view";
 import { SiteHeader } from "@/components/site-header";
 import { Panel } from "@/components/ui";
 
@@ -85,9 +86,9 @@ export default async function CampaignPage({
                     ) : null}
                   </div>
                   {gameSession.outline ? (
-                    <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-sm text-ink-soft">
-                      {gameSession.outline}
-                    </p>
+                    <div className="mt-2">
+                      <MarkdownView content={gameSession.outline} clamp />
+                    </div>
                   ) : null}
                 </Link>
               ))

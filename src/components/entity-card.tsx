@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MarkdownView } from "@/components/markdown-view";
 import { uploadUrl } from "@/lib/upload-url";
 
 export function EntityCard({
@@ -62,9 +63,9 @@ export function EntityCard({
             </p>
           )}
           {!compact && entity.description ? (
-            <p className="mt-2 line-clamp-2 text-sm text-ink-soft/90">
-              {entity.description}
-            </p>
+            <div className="mt-2">
+              <MarkdownView content={entity.description} clamp />
+            </div>
           ) : null}
         </div>
       </div>

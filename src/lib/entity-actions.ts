@@ -190,6 +190,37 @@ export async function updateEntityAction(
   redirect(`/campaigns/${campaignId}/entities/${entityId}`);
 }
 
+export async function updateEntityPortraitAction(
+  campaignId: string,
+  entityId: string,
+  formData: FormData,
+) {
+  const { session } = await requireCampaignMember(campaignId);
+  const existing = await getEntity(campaignId, entityId);
+  if (!existing) {
+    redirect(`/campaigns/${campaignId}/entities`);
+  }
+
+  const image = formFile(formData, "image");
+  if (!image) {
+    redirect(`/campaigns/${campaignId}/entities/${entityId}`);
+  }
+
+  const imagePath = await saveCampaignUpload(campaignId, image, "entity");
+  await db
+    .update(entities)
+    .set({
+      imagePath,
+      updatedBy: session.user.id,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(entities.id, entityId), eq(entities.campaignId, campaignId)));
+
+  revalidatePath(`/campaigns/${campaignId}/entities/${entityId}`);
+  revalidatePath(`/campaigns/${campaignId}/entities`);
+  redirect(`/campaigns/${campaignId}/entities/${entityId}`);
+}
+
 export async function addEntityAppearanceAction(
   campaignId: string,
   entityId: string,

@@ -1,14 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  getGameSession,
-  updateGameSessionAction,
-} from "@/lib/actions";
+import { CampaignNav } from "@/components/campaign-nav";
+import { LiveDocEditor } from "@/components/live-doc-editor";
+import { SiteHeader } from "@/components/site-header";
+import { Panel } from "@/components/ui";
+import { getGameSession } from "@/lib/actions";
 import { deleteGameSessionAction } from "@/lib/fate-actions";
 import { requireCampaignMember } from "@/lib/session";
-import { CampaignNav } from "@/components/campaign-nav";
-import { SiteHeader } from "@/components/site-header";
-import { Button, Field, Panel } from "@/components/ui";
 
 export default async function SessionDetailPage({
   params,
@@ -19,11 +17,6 @@ export default async function SessionDetailPage({
   const { session } = await requireCampaignMember(id);
   const gameSession = await getGameSession(id, sessionId);
   if (!gameSession) notFound();
-
-  async function action(formData: FormData) {
-    "use server";
-    await updateGameSessionAction(id, sessionId, formData);
-  }
 
   async function deleteAction() {
     "use server";
@@ -46,31 +39,33 @@ export default async function SessionDetailPage({
             Edit session notes
           </h1>
           <p className="mt-1 text-sm text-ink-soft">
-            Any campaign member can update this outline. Use Maps to pin who you
-            met and where.
+            Changes autosave and appear for other members within a couple
+            seconds. Use Maps to pin who you met and where.
           </p>
-          <form action={action} className="mt-5 space-y-4">
-            <Field
-              label="Title"
-              name="title"
-              required
-              defaultValue={gameSession.title}
+          <div className="mt-5">
+            <LiveDocEditor
+              campaignId={id}
+              docType="session"
+              docId={sessionId}
+              initialUpdatedAt={gameSession.updatedAt.getTime()}
+              initialUpdatedByName={null}
+              initialFields={{
+                title: gameSession.title,
+                sessionDate: gameSession.sessionDate ?? "",
+                outline: gameSession.outline,
+              }}
+              fields={[
+                { key: "title", label: "Title", kind: "text", required: true },
+                { key: "sessionDate", label: "Session date", kind: "date" },
+                {
+                  key: "outline",
+                  label: "Outline",
+                  kind: "markdown",
+                  rows: 16,
+                },
+              ]}
             />
-            <Field
-              label="Session date"
-              name="sessionDate"
-              type="date"
-              defaultValue={gameSession.sessionDate ?? undefined}
-            />
-            <Field
-              label="Outline"
-              name="outline"
-              as="textarea"
-              rows={16}
-              defaultValue={gameSession.outline}
-            />
-            <Button>Save notes</Button>
-          </form>
+          </div>
           <form action={deleteAction} className="mt-6 border-t border-line pt-4">
             <p className="text-xs text-ink-soft">
               Deleting removes this session from the Fate river and its
