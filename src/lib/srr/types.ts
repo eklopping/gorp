@@ -46,6 +46,11 @@ export type TagDefinition = {
   types: TagType[];
   description: string;
   stackableMax?: number;
+  /**
+   * Ordered rarity tiers for tags like Reinforced [B](1)[I](2)[C](3).
+   * Each stack uses the next tier's coin/segment rules (Vol.3 Gear).
+   */
+  stackTiers?: TagType[];
   loadMod?: number;
   wearMod?: number;
   coinModFlat?: number;

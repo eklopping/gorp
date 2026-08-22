@@ -1,5 +1,5 @@
 import { ITEM_PROFILES } from "@/data/srr/profiles";
-import { BUILTIN_TAGS, baseTagCoin } from "@/data/srr/tags";
+import { BUILTIN_TAGS, TAG_TYPE_COIN, baseTagCoin } from "@/data/srr/tags";
 import type {
   CalculatorMode,
   ItemProfile,
@@ -18,6 +18,119 @@ export function stackableCoinCost(base: number, stacks: number) {
   const safeStacks = Math.max(1, stacks);
   if (base <= 0) return base * safeStacks;
   return base * (2 ** safeStacks - 1);
+}
+
+/**
+ * Coin cost for a tag at N stacks (Vol.3 Gear).
+ * Tiered tags (Reinforced B→I→C): each stack uses that tier's base × 2^(prior stacks).
+ * Other tags: sum multi-rarity bases, then double per additional stack.
+ */
+export function tagStackCoinCost(tag: TagDefinition, stacks: number) {
+  const n = Math.max(1, stacks);
+  const flat = (tag.coinModFlat ?? 0) * n;
+
+  if (tag.stackTiers?.length) {
+    let total = 0;
+    for (let i = 0; i < n; i += 1) {
+      const tier =
+        tag.stackTiers[Math.min(i, tag.stackTiers.length - 1)] ?? "B";
+      const base = TAG_TYPE_COIN[tier];
+      if (base === null || base === undefined) continue;
+      total += base * 2 ** i;
+    }
+    return total + flat;
+  }
+
+  const typeBase = baseTagCoin(tag.types);
+  if (typeBase < 0) return typeBase * n + flat;
+  return stackableCoinCost(typeBase, n) + flat;
+}
+
+function stackTypeAt(tag: TagDefinition, stackIndex: number): TagType {
+  if (tag.stackTiers?.length) {
+    return (
+      tag.stackTiers[Math.min(stackIndex, tag.stackTiers.length - 1)] ?? "B"
+    );
+  }
+  // Prefer the “highest” crafting rarity for non-tiered multi-type tags.
+  const order: TagType[] = ["M", "MI", "I", "C", "B"];
+  for (const type of order) {
+    if (tag.types.includes(type)) return type;
+  }
+  return tag.types[0] ?? "B";
+}
+
+function resourcePointsForType(type: TagType): number {
+  if (type === "I" || type === "MI" || type === "M") return 2;
+  if (type === "B" || type === "C") return 1;
+  return 0;
+}
+
+/** Vol.1 Unique Creation resource contribution for one tag (counts each stack). */
+export function tagResourceCost(tag: TagDefinition, stacks: number) {
+  const n = Math.max(1, stacks);
+  let total = 0;
+  for (let i = 0; i < n; i += 1) {
+    total += resourcePointsForType(stackTypeAt(tag, i));
+  }
+  return total;
+}
+
+function segmentBaseForType(type: TagType): number {
+  if (type === "B") return 1;
+  if (type === "I" || type === "MI" || type === "C" || type === "M") return 2;
+  return 0;
+}
+
+/**
+ * Vol.1 Unique Creation clock segments + BP for one tag.
+ * Additional stacks cost (normal + 1) segments; multi-type I/C stacks get +1 more.
+ * Stackable ranks do not multiply BP — BP is once per tag (not per stack).
+ */
+export function tagClockCost(
+  tag: TagDefinition,
+  stacks: number,
+  uniqueSegments = 1,
+  uniqueBp = 1,
+): { segments: number; bp: number } {
+  const n = Math.max(1, stacks);
+  const isLegendary = tag.types.includes("Legendary");
+  const isUnique = tag.types.includes("Unique");
+
+  if (isLegendary) {
+    return { segments: 20 * n, bp: 5 };
+  }
+  if (isUnique) {
+    return {
+      segments: uniqueSegments * n,
+      bp: Math.max(1, uniqueBp),
+    };
+  }
+
+  const multiTyped =
+    (tag.stackTiers?.length ?? 0) > 1 ||
+    tag.types.filter((type) =>
+      ["B", "I", "MI", "C", "M"].includes(type),
+    ).length > 1;
+
+  let segments = 0;
+  for (let i = 0; i < n; i += 1) {
+    const type = stackTypeAt(tag, i);
+    const base = segmentBaseForType(type);
+    let seg = i === 0 ? base : base + 1;
+    if (
+      multiTyped &&
+      (type === "I" || type === "MI" || type === "C")
+    ) {
+      seg += 1;
+    }
+    segments += seg;
+  }
+
+  const grantsBp = tag.types.some((type) =>
+    ["I", "MI", "C", "M"].includes(type),
+  );
+  return { segments, bp: grantsBp ? 1 : 0 };
 }
 
 export function resolveTag(
@@ -124,8 +237,7 @@ export function calculateItem(input: CalcInput): CalcResult {
   let loadMod = profile.loadMod;
   let positiveCount = 0;
   let negativeSlotsUsed = 0;
-  let basicOrCraftCount = 0;
-  let ingredientOrMagicCount = 0;
+  let tagResource = 0;
   let segments = profile.startingWear + Math.ceil(addedWear / 2);
   let countedBpFromTags = 0;
   let hasUniqueOrLegendary = false;
@@ -155,17 +267,21 @@ export function calculateItem(input: CalcInput): CalcResult {
       1,
       Math.min(selected.stacks, tag.stackableMax ?? selected.stacks),
     );
-    const typeBase = baseTagCoin(tag.types);
-    const flat = tag.coinModFlat ?? 0;
-    const finalCoin =
-      typeBase < 0
-        ? typeBase * stacks + flat * stacks
-        : stackableCoinCost(typeBase, stacks) + flat * stacks;
+    const finalCoin = tagStackCoinCost(tag, stacks);
+    const resourcePts = tagResourceCost(tag, stacks);
+    const clock = tagClockCost(
+      tag,
+      stacks,
+      input.customUniqueSegments,
+      input.customUniqueBp,
+    );
 
     tagCoins += finalCoin;
+    tagResource += resourcePts;
     loadMod += (tag.loadMod ?? 0) * stacks;
+    segments += clock.segments;
+    countedBpFromTags += clock.bp;
 
-    const neg = negativeSlotWeight(tag.types);
     if (tag.types.includes("PN")) {
       negativeSlotsUsed += 2;
     } else if (tag.types.includes("N") && !tag.inherent) {
@@ -178,79 +294,18 @@ export function calculateItem(input: CalcInput): CalcResult {
       positiveCount += 1; // stackable still one slot
     }
 
-    // Tinker segment/BP accounting
-    const isBasic = tag.types.includes("B");
-    const isIng = tag.types.includes("I") || tag.types.includes("MI");
-    const isCraft = tag.types.includes("C");
-    const isMagic = tag.types.includes("M");
-    const isLegendary = tag.types.includes("Legendary");
-    const isUnique = tag.types.includes("Unique");
-    if (isLegendary || isUnique) hasUniqueOrLegendary = true;
-    if (isCraft) hasCraftsmanTag = true;
-
-    if (isLegendary) {
-      segments += 20 * stacks;
-      countedBpFromTags += 5 * stacks;
-      lines.push({
-        label: `${tag.name} ×${stacks} (Legendary)`,
-        coins: finalCoin,
-        segments: 20 * stacks,
-        bp: 5 * stacks,
-      });
-    } else if (isUnique) {
-      const seg = (input.customUniqueSegments ?? 1) * stacks;
-      const uniqueBp = (input.customUniqueBp ?? 1) * stacks;
-      segments += seg;
-      countedBpFromTags += uniqueBp;
-      lines.push({
-        label: `${tag.name} ×${stacks} (Unique)`,
-        coins: finalCoin,
-        segments: seg,
-        bp: uniqueBp,
-      });
-    } else if (isMagic) {
-      segments += 2 * stacks;
-      countedBpFromTags += stacks;
-      ingredientOrMagicCount += stacks;
-      lines.push({
-        label: `${tag.name} ×${stacks} [M]`,
-        coins: finalCoin,
-        segments: 2 * stacks,
-        bp: stacks,
-      });
-    } else if (isIng || isCraft) {
-      let seg = 2 * stacks;
-      const pricedTypes = tag.types.filter((t) =>
-        ["I", "MI", "C", "M", "B"].includes(t),
-      );
-      if (pricedTypes.length > 1) seg += stacks;
-      segments += seg;
-      countedBpFromTags += stacks;
-      if (isIng || isMagic) ingredientOrMagicCount += stacks;
-      else basicOrCraftCount += stacks;
-      lines.push({
-        label: `${tag.name} ×${stacks} [${tag.types.join("/")}]`,
-        coins: finalCoin,
-        segments: seg,
-        bp: stacks,
-      });
-    } else if (isBasic) {
-      const seg = 1 + (stacks - 1) * 2;
-      segments += seg;
-      basicOrCraftCount += stacks;
-      lines.push({
-        label: `${tag.name} ×${stacks} [B]`,
-        coins: finalCoin,
-        segments: seg,
-      });
-    } else {
-      lines.push({
-        label: `${tag.name} [${tag.types.join("/")}]`,
-        coins: finalCoin,
-      });
+    if (tag.types.includes("Legendary") || tag.types.includes("Unique")) {
+      hasUniqueOrLegendary = true;
     }
+    if (tag.types.includes("C")) hasCraftsmanTag = true;
 
-    void neg;
+    lines.push({
+      label: `${tag.name} ×${stacks} [${tag.types.join("/")}]`,
+      coins: finalCoin,
+      resource: resourcePts || undefined,
+      segments: clock.segments || undefined,
+      bp: clock.bp || undefined,
+    });
   }
 
   // Normalize negative slots: max 2
@@ -286,6 +341,7 @@ export function calculateItem(input: CalcInput): CalcResult {
     );
   }
 
+  // Vol.1: over-limit tags add +1 BP each on top of the tag's normal cost.
   const bp = Math.max(1, countedBpFromTags + overLimitTags);
 
   const wearCoins = wearCoinCost(totalWear);
@@ -305,11 +361,12 @@ export function calculateItem(input: CalcInput): CalcResult {
     load = Math.max(0, Math.min(2, load));
   }
 
+  // Vol.1 Unique Creation Resource:
+  // ½ starting Wear (min 1) + ½ added Wear (min 1) + tag stack points + 5× over-limit
   const resource =
     halfMin1(profile.startingWear) +
     halfMin1(addedWear) +
-    basicOrCraftCount +
-    ingredientOrMagicCount * 2 +
+    tagResource +
     overLimitTags * 5;
 
   if (crafterType === "craftsman") {

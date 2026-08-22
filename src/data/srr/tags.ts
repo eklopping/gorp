@@ -524,6 +524,7 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     id: "extra-plating",
     name: "Extra Plating",
     types: ["B", "I", "C"],
+    stackTiers: ["B", "I", "C"],
     description:
       "+1 Toughness per stack (B→I→C costs). Clothing, armor, shields. Not with Lightweight.",
     stackableMax: 3,
@@ -533,8 +534,9 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     id: "reinforced",
     name: "Reinforced",
     types: ["B", "I", "C"],
+    stackTiers: ["B", "I", "C"],
     description:
-      "Sundering Soak +1 Wound soaked per stack. Inherent to Shields. Armor only when purchased.",
+      "Sundering Soak +1 Wound soaked per stack (B→I→C costs). Inherent to Shields. Armor only when purchased.",
     stackableMax: 3,
     compatibleSlots: ARMOR,
   },
