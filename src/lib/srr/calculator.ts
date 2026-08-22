@@ -225,35 +225,24 @@ export function calculateItem(input: CalcInput): CalcResult {
   const crafterType: CalculatorMode = input.crafterType ?? "craftsman";
   const profile =
     ITEM_PROFILES.find((row) => row.id === input.profileId) ?? ITEM_PROFILES[0];
-  const totalWear = Math.max(
+  const maxWear = profile.maxWear ?? 99;
+  const baseWear = Math.max(
     profile.startingWear,
-    Math.min(input.totalWear, profile.maxWear ?? 99),
+    Math.min(input.totalWear, maxWear),
   );
-  const addedWear = Math.max(0, totalWear - profile.startingWear);
   const warnings: string[] = [];
-  const lines: CalcBreakdownLine[] = [];
+  const tagLines: CalcBreakdownLine[] = [];
 
   let tagCoins = 0;
   let loadMod = profile.loadMod;
+  let wearBonusFromTags = 0;
   let positiveCount = 0;
   let negativeSlotsUsed = 0;
   let tagResource = 0;
-  let segments = profile.startingWear + Math.ceil(addedWear / 2);
+  let tagClockSegments = 0;
   let countedBpFromTags = 0;
   let hasUniqueOrLegendary = false;
   let hasCraftsmanTag = false;
-
-  lines.push({
-    label: `Profile: ${profile.name}`,
-    coins: profile.coin,
-    segments: profile.startingWear,
-  });
-  if (addedWear > 0) {
-    lines.push({
-      label: `Added Wear (${addedWear})`,
-      segments: Math.ceil(addedWear / 2),
-    });
-  }
 
   for (const selected of input.selected) {
     const tag = resolveTag(selected.tagId, input.tags);
@@ -275,11 +264,14 @@ export function calculateItem(input: CalcInput): CalcResult {
       input.customUniqueSegments,
       input.customUniqueBp,
     );
+    const wearDelta = (tag.wearMod ?? 0) * stacks;
+    const loadDelta = (tag.loadMod ?? 0) * stacks;
 
     tagCoins += finalCoin;
     tagResource += resourcePts;
-    loadMod += (tag.loadMod ?? 0) * stacks;
-    segments += clock.segments;
+    loadMod += loadDelta;
+    wearBonusFromTags += wearDelta;
+    tagClockSegments += clock.segments;
     countedBpFromTags += clock.bp;
 
     if (tag.types.includes("PN")) {
@@ -299,14 +291,52 @@ export function calculateItem(input: CalcInput): CalcResult {
     }
     if (tag.types.includes("C")) hasCraftsmanTag = true;
 
-    lines.push({
-      label: `${tag.name} ×${stacks} [${tag.types.join("/")}]`,
+    const extras: string[] = [];
+    if (wearDelta) extras.push(`${wearDelta > 0 ? "+" : ""}${wearDelta} Wear`);
+    if (loadDelta) extras.push(`${loadDelta > 0 ? "+" : ""}${loadDelta} Load`);
+    if (tag.coinModFlat)
+      extras.push(
+        `${tag.coinModFlat > 0 ? "+" : ""}${tag.coinModFlat * stacks}c mod`,
+      );
+
+    tagLines.push({
+      label: `${tag.name} ×${stacks} [${tag.types.join("/")}]${
+        extras.length ? ` (${extras.join(", ")})` : ""
+      }`,
       coins: finalCoin,
       resource: resourcePts || undefined,
       segments: clock.segments || undefined,
       bp: clock.bp || undefined,
     });
   }
+
+  // Material / tag Wear bonuses apply on top of the chosen Wear total.
+  const totalWear = Math.max(
+    profile.startingWear,
+    Math.min(baseWear + wearBonusFromTags, maxWear),
+  );
+  const addedWear = Math.max(0, totalWear - profile.startingWear);
+  const segments =
+    profile.startingWear + Math.ceil(addedWear / 2) + tagClockSegments;
+
+  const lines: CalcBreakdownLine[] = [
+    {
+      label: `Profile: ${profile.name}`,
+      coins: profile.coin,
+      segments: profile.startingWear,
+    },
+  ];
+  if (addedWear > 0) {
+    lines.push({
+      label: `Added Wear (${addedWear})${
+        wearBonusFromTags
+          ? ` incl. ${wearBonusFromTags > 0 ? "+" : ""}${wearBonusFromTags} from tags`
+          : ""
+      }`,
+      segments: Math.ceil(addedWear / 2),
+    });
+  }
+  lines.push(...tagLines);
 
   // Normalize negative slots: max 2
   if (negativeSlotsUsed > 2) {
@@ -315,7 +345,8 @@ export function calculateItem(input: CalcInput): CalcResult {
   }
 
   const freeTags = profile.freeStartingTags ?? 0;
-  const tagSlotsMax = maxPositiveTagSlots(totalWear, negativeSlotsUsed) + freeTags;
+  const tagSlotsMax =
+    maxPositiveTagSlots(totalWear, negativeSlotsUsed) + freeTags;
   const tagSlotsUsed = positiveCount;
   const overLimitTags = Math.max(0, tagSlotsUsed - tagSlotsMax);
   if (overLimitTags > 0) {

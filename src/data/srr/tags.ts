@@ -188,7 +188,7 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     name: "Catfolk Steel",
     types: ["MI"],
     description:
-      "Hit-and-run material. Mark Wear for Fighting/Athletics bonuses or Extraction as Free Action on armor. −1 Coin; −1 Damage / Toughness.",
+      "Hit-and-run material. Mark Wear for Fighting/Athletics bonuses or Extraction as Free Action on armor. +1 Parry; −1 Coin; −1 Damage / Toughness.",
     coinModFlat: -1,
     compatibleSlots: ["armor-light", "armor-medium", "melee-1h"],
   },
@@ -196,18 +196,18 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     id: "foxfolk-steel",
     name: "Foxfolk Steel",
     types: ["MI"],
-    description: "Any item. +2 Temporary Wear. +1 Wear, −1 Coin, +1 Load.",
+    description:
+      "Any item. +2 Temporary Wear. +1 Wear, −1 Coin; +1 Load.",
     coinModFlat: -1,
     wearMod: 1,
     loadMod: 1,
-    // *Any Item — general use
   },
   {
     id: "mousefolk-steel",
     name: "Mousefolk Steel",
     types: ["MI"],
     description:
-      "Melee: damage uses Smarts instead of Strength. Ranged: Mark 2 Wear to Aim. −2 Load, −1 Coin, −1 Wear.",
+      "Melee: damage uses Smarts instead of Strength. Ranged: Mark 2 Wear to Aim. −2 Load, −1 Coin; −1 Wear.",
     coinModFlat: -1,
     wearMod: -1,
     loadMod: -2,
@@ -218,8 +218,9 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     name: "Rabbitfolk Steel",
     types: ["MI"],
     description:
-      "Melee: damage uses Agility. Armor: +1 Pace / Mark Wear for +2 Pace. −1 Coin; −1 Damage or Toughness.",
+      "Melee: damage uses Agility. Armor: +1 Pace / Mark Wear for +2 Pace. +1 Parry on weapons or −1 Load on armor; −1 Coin; −1 Damage or Toughness.",
     coinModFlat: -1,
+    loadMod: -1,
     compatibleSlots: [...MELEE, ...ARMOR],
   },
   {
@@ -244,7 +245,7 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     name: "Bearclaw Iron",
     types: ["MI", "NA", "C"],
     description:
-      "Mark Wear to inflict Vulnerable until end of next turn. Ranged via Special Ammunition. +2 Wear, +1 Load.",
+      "Mark Wear to inflict Vulnerable until end of next turn. Ranged via Special Ammunition. +2 Wear; +1 Load.",
     wearMod: 2,
     loadMod: 1,
     compatibleSlots: [...MELEE, "accessory"],
@@ -254,7 +255,7 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     name: "Wurmshell Chitin",
     types: ["M", "MI", "NA", "C"],
     description:
-      "Mark 2 Wear for power points. Comes with Charged [M](1) and Unstable [PN]. Not for firearms. +1 Wear, +1 Coin.",
+      "Mark 2 Wear for power points. Comes with Charged [M](1) and Unstable [PN]. Not for firearms. +1 Wear; +1 Coin.",
     wearMod: 1,
     coinModFlat: 1,
     forbiddenProfileIds: [...FIREARMS],
@@ -264,7 +265,7 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     name: "Wild Iron",
     types: ["MI"],
     description:
-      "Mark 1 Wear before melee/throw for +1 Fighting/Athletics and damage. Armor/shields +1 Toughness. −1 Coin, +1 Load.",
+      "Mark 1 Wear before melee/throw for +1 Fighting/Athletics and damage. Armor/shields +1 Toughness. −1 Coin; +1 Load.",
     coinModFlat: -1,
     loadMod: 1,
     compatibleSlots: [...MELEE, ...ARMOR, "shield"],
@@ -274,7 +275,7 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     name: "Keepers Steel",
     types: ["MI", "C", "NA"],
     description:
-      "Mark 1 Wear instead of 2 for Sundering Soak. +2 Repair rolls. +1 Coin.",
+      "Mark 1 Wear instead of 2 for Sundering Soak. +2 Repair rolls; +1 Coin.",
     coinModFlat: 1,
     compatibleSlots: [...WEAPON, ...ARMOR, "shield"],
   },
@@ -283,7 +284,7 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     name: "Taln Gold",
     types: ["MI", "C"],
     description:
-      "Value +4 Coin or ×2 (whichever higher). Social/Rep bonuses when displayed. −1 Wear.",
+      "Value +4 Coin or ×2 (whichever higher). Social/Rep bonuses when displayed. +4 Coin; −1 Wear.",
     coinModFlat: 4,
     wearMod: -1,
     compatibleSlots: [...WEAPON, ...ARMOR, "accessory", "clothing"],
@@ -293,7 +294,7 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     name: "Boloran Fire Bronze",
     types: ["MI", "C", "M", "NA"],
     description:
-      "Resist storm/Dangerous travel / Attrition; Sundering Soak vs electrical fills Charged. Charged[M](1). −1 Wear, −1 Toughness, +2 Coin.",
+      "Resist storm/Dangerous travel / Attrition; Sundering Soak vs electrical fills Charged. Charged[M](1). −1 Wear, −1 Toughness; +2 Coin.",
     wearMod: -1,
     coinModFlat: 2,
     compatibleSlots: [...WEAPON, ...ARMOR, "accessory"],
