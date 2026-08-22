@@ -14,6 +14,161 @@ export const TAG_TYPE_COIN: Record<TagType, number | null> = {
   Unique: null,
 };
 
+/** Display order matching the PDF Tag Type Table. */
+export const TAG_TYPE_ORDER: TagType[] = [
+  "B",
+  "I",
+  "MI",
+  "C",
+  "M",
+  "N",
+  "PN",
+  "NA",
+  "Legendary",
+  "Unique",
+];
+
+/**
+ * Color coordination aligned with SRR Vol.3 conventions:
+ * Basic bronze, Ingredient green, Material teal, Craftsman steel,
+ * Magical violet, Negative orange, Potent Negative crimson,
+ * Narrative slate, Legendary gold, Unique indigo.
+ */
+export const TAG_TYPE_META: Record<
+  TagType,
+  {
+    label: string;
+    symbol: string;
+    coin: string;
+    /** Filter chip / section header */
+    chipClass: string;
+    /** Compact [B] style badge */
+    badgeClass: string;
+    /** Left accent on list rows */
+    rowAccentClass: string;
+  }
+> = {
+  B: {
+    label: "Basic",
+    symbol: "B",
+    coin: "1c",
+    chipClass:
+      "border-[#c49a55]/55 bg-[#f3e6c8] text-[#5c4318] data-[active=true]:bg-[#c49a55] data-[active=true]:text-[#1a1208]",
+    badgeClass: "border-[#c49a55]/60 bg-[#f3e6c8] text-[#5c4318]",
+    rowAccentClass: "border-l-[#c49a55]",
+  },
+  I: {
+    label: "Ingredient",
+    symbol: "I",
+    coin: "2c",
+    chipClass:
+      "border-[#5a8f4a]/55 bg-[#e4f0d8] text-[#2f4f24] data-[active=true]:bg-[#5a8f4a] data-[active=true]:text-white",
+    badgeClass: "border-[#5a8f4a]/60 bg-[#e4f0d8] text-[#2f4f24]",
+    rowAccentClass: "border-l-[#5a8f4a]",
+  },
+  MI: {
+    label: "Material Ingredient",
+    symbol: "MI",
+    coin: "2c",
+    chipClass:
+      "border-[#2f8f8a]/55 bg-[#d8f0ee] text-[#1a524e] data-[active=true]:bg-[#2f8f8a] data-[active=true]:text-white",
+    badgeClass: "border-[#2f8f8a]/60 bg-[#d8f0ee] text-[#1a524e]",
+    rowAccentClass: "border-l-[#2f8f8a]",
+  },
+  C: {
+    label: "Craftsman",
+    symbol: "C",
+    coin: "3c",
+    chipClass:
+      "border-[#4a6fa5]/55 bg-[#dce6f5] text-[#243f66] data-[active=true]:bg-[#4a6fa5] data-[active=true]:text-white",
+    badgeClass: "border-[#4a6fa5]/60 bg-[#dce6f5] text-[#243f66]",
+    rowAccentClass: "border-l-[#4a6fa5]",
+  },
+  M: {
+    label: "Magical",
+    symbol: "M",
+    coin: "2c",
+    chipClass:
+      "border-[#7a4ea8]/55 bg-[#eadcf5] text-[#3d2460] data-[active=true]:bg-[#7a4ea8] data-[active=true]:text-white",
+    badgeClass: "border-[#7a4ea8]/60 bg-[#eadcf5] text-[#3d2460]",
+    rowAccentClass: "border-l-[#7a4ea8]",
+  },
+  N: {
+    label: "Negative",
+    symbol: "N",
+    coin: "−1c",
+    chipClass:
+      "border-[#d17a3a]/55 bg-[#f8e4d4] text-[#6b3410] data-[active=true]:bg-[#d17a3a] data-[active=true]:text-white",
+    badgeClass: "border-[#d17a3a]/60 bg-[#f8e4d4] text-[#6b3410]",
+    rowAccentClass: "border-l-[#d17a3a]",
+  },
+  PN: {
+    label: "Potent Negative",
+    symbol: "PN",
+    coin: "−2c",
+    chipClass:
+      "border-[#a33a2e]/55 bg-[#f5d8d4] text-[#5c1812] data-[active=true]:bg-[#a33a2e] data-[active=true]:text-white",
+    badgeClass: "border-[#a33a2e]/60 bg-[#f5d8d4] text-[#5c1812]",
+    rowAccentClass: "border-l-[#a33a2e]",
+  },
+  NA: {
+    label: "Narrative",
+    symbol: "NA",
+    coin: "—",
+    chipClass:
+      "border-[#6b7280]/55 bg-[#e8eaed] text-[#374151] data-[active=true]:bg-[#6b7280] data-[active=true]:text-white",
+    badgeClass: "border-[#6b7280]/60 bg-[#e8eaed] text-[#374151]",
+    rowAccentClass: "border-l-[#6b7280]",
+  },
+  Legendary: {
+    label: "Legendary",
+    symbol: "L",
+    coin: "—",
+    chipClass:
+      "border-[#b8860b]/55 bg-[#f7ecc8] text-[#5c4508] data-[active=true]:bg-[#b8860b] data-[active=true]:text-[#1a1208]",
+    badgeClass: "border-[#b8860b]/60 bg-[#f7ecc8] text-[#5c4508]",
+    rowAccentClass: "border-l-[#b8860b]",
+  },
+  Unique: {
+    label: "Unique",
+    symbol: "U",
+    coin: "—",
+    chipClass:
+      "border-[#4338ca]/55 bg-[#e0e7ff] text-[#312e81] data-[active=true]:bg-[#4338ca] data-[active=true]:text-white",
+    badgeClass: "border-[#4338ca]/60 bg-[#e0e7ff] text-[#312e81]",
+    rowAccentClass: "border-l-[#4338ca]",
+  },
+};
+
+/** Most specific type for grouping multi-typed tags. */
+const PRIMARY_PRIORITY: TagType[] = [
+  "PN",
+  "N",
+  "Legendary",
+  "Unique",
+  "MI",
+  "C",
+  "M",
+  "I",
+  "B",
+  "NA",
+];
+
+export function primaryTagType(types: TagType[]): TagType {
+  for (const type of PRIMARY_PRIORITY) {
+    if (types.includes(type)) return type;
+  }
+  return types[0] ?? "B";
+}
+
+export function tagMatchesTypeFilter(
+  tag: TagDefinition,
+  typeFilter: TagType | "all",
+) {
+  if (typeFilter === "all") return true;
+  return tag.types.includes(typeFilter);
+}
+
 const MELEE: ItemSlot[] = ["melee-1h", "melee-2h"];
 const RANGED: ItemSlot[] = ["ranged-simple", "ranged-advanced"];
 const WEAPON: ItemSlot[] = [...MELEE, ...RANGED];

@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { ITEM_PROFILES } from "@/data/srr/profiles";
-import { BUILTIN_TAGS } from "@/data/srr/tags";
+import {
+  BUILTIN_TAGS,
+  TAG_TYPE_META,
+  TAG_TYPE_ORDER,
+  primaryTagType,
+  tagMatchesTypeFilter,
+} from "@/data/srr/tags";
 import {
   calculateItem,
   isTagCompatibleWithProfile,
@@ -30,19 +36,7 @@ export type CampaignPlayerOption = {
   role: "gm" | "player";
 };
 
-const ALL_TYPES: TagType[] = [
-  "B",
-  "I",
-  "MI",
-  "C",
-  "M",
-  "N",
-  "PN",
-  "NA",
-  "Legendary",
-  "Unique",
-];
-
+const ALL_TYPES: TagType[] = TAG_TYPE_ORDER;
 const ALL_SLOTS: { id: ItemSlot; label: string }[] = [
   { id: "melee-1h", label: "Melee 1H" },
   { id: "melee-2h", label: "Melee 2H" },
@@ -85,6 +79,7 @@ export function ItemCostCalculator({
   const [totalWear, setTotalWear] = useState(ITEM_PROFILES[0].startingWear);
   const [selected, setSelected] = useState<SelectedTag[]>([]);
   const [filter, setFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState<TagType | "all">("all");
   const [uniqueSeg, setUniqueSeg] = useState(1);
   const [uniqueBp, setUniqueBp] = useState(1);
   const [crafterType, setCrafterType] = useState<CalculatorMode>("craftsman");
@@ -188,15 +183,45 @@ export function ItemCostCalculator({
     [repo, profile],
   );
 
-  const filtered = compatibleTags.filter((tag) => {
-    const q = filter.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      tag.name.toLowerCase().includes(q) ||
-      tag.types.join(" ").toLowerCase().includes(q) ||
-      tag.description.toLowerCase().includes(q)
-    );
-  });
+  const filtered = useMemo(() => {
+    return compatibleTags.filter((tag) => {
+      if (!tagMatchesTypeFilter(tag, typeFilter)) return false;
+      const q = filter.trim().toLowerCase();
+      if (!q) return true;
+      return (
+        tag.name.toLowerCase().includes(q) ||
+        tag.types.join(" ").toLowerCase().includes(q) ||
+        tag.types.some((type) =>
+          TAG_TYPE_META[type].label.toLowerCase().includes(q),
+        ) ||
+        tag.description.toLowerCase().includes(q)
+      );
+    });
+  }, [compatibleTags, typeFilter, filter]);
+
+  const filteredByType = useMemo(() => {
+    const groups = new Map<TagType, TagDefinition[]>();
+    for (const type of TAG_TYPE_ORDER) groups.set(type, []);
+    for (const tag of filtered) {
+      const primary = primaryTagType(tag.types);
+      groups.get(primary)?.push(tag);
+    }
+    return TAG_TYPE_ORDER.map((type) => ({
+      type,
+      meta: TAG_TYPE_META[type],
+      tags: groups.get(type) ?? [],
+    })).filter((group) => group.tags.length > 0);
+  }, [filtered]);
+
+  const typeCounts = useMemo(() => {
+    const counts = Object.fromEntries(
+      TAG_TYPE_ORDER.map((type) => [type, 0]),
+    ) as Record<TagType, number>;
+    for (const tag of compatibleTags) {
+      for (const type of tag.types) counts[type] += 1;
+    }
+    return counts;
+  }, [compatibleTags]);
 
   function persistCustom(next: TagDefinition[]) {
     setCustomTags(next);
@@ -453,12 +478,10 @@ export function ItemCostCalculator({
                     className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-paper-deep/30 px-3 py-2"
                   >
                     <div>
-                      <p className="font-medium">
-                        {tag.name}{" "}
-                        <span className="text-xs text-ink-soft">
-                          [{tag.types.join("/")}]
-                        </span>
-                      </p>
+                      <p className="font-medium">{tag.name}</p>
+                      <div className="mt-1">
+                        <TagTypeBadges types={tag.types} />
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {tag.stackableMax && tag.stackableMax > 1 ? (
@@ -602,46 +625,99 @@ export function ItemCostCalculator({
           <p className="mt-1 text-xs text-ink-soft">
             Showing tags compatible with{" "}
             <span className="font-medium text-ink">{profile.name}</span> (
-            {filtered.length} available).
+            {filtered.length} available). Filter by PDF tag type.
           </p>
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              data-active={typeFilter === "all"}
+              onClick={() => setTypeFilter("all")}
+              className="rounded-md border border-line bg-paper-deep/40 px-2.5 py-1 text-[11px] font-medium text-ink data-[active=true]:border-accent data-[active=true]:bg-accent data-[active=true]:text-paper"
+            >
+              All ({compatibleTags.length})
+            </button>
+            {TAG_TYPE_ORDER.map((type) => {
+              const meta = TAG_TYPE_META[type];
+              const count = typeCounts[type];
+              if (count === 0) return null;
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  data-active={typeFilter === type}
+                  title={`${meta.label} · ${meta.coin}`}
+                  onClick={() =>
+                    setTypeFilter((prev) => (prev === type ? "all" : type))
+                  }
+                  className={`rounded-md border px-2.5 py-1 text-[11px] font-medium ${meta.chipClass}`}
+                >
+                  [{meta.symbol}] {meta.label}
+                  <span className="ml-1 opacity-70">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
           <input
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
-            placeholder="Search compatible tags…"
+            placeholder="Search name, type, or description…"
             className="mt-3 w-full rounded-lg border border-line bg-paper-deep/40 px-3 py-2 text-sm"
           />
-          <ul className="mt-3 max-h-56 space-y-2 overflow-y-auto">
+
+          <div className="mt-3 max-h-80 space-y-4 overflow-y-auto pr-1">
             {filtered.length === 0 ? (
-              <li className="text-sm text-ink-soft">
-                No compatible tags match this profile/search.
-              </li>
+              <p className="text-sm text-ink-soft">
+                No compatible tags match this profile / type / search.
+              </p>
             ) : (
-              filtered.map((tag) => (
-                <li
-                  key={tag.id}
-                  className="flex items-start justify-between gap-2 rounded-xl border border-line px-3 py-2"
-                >
-                  <div>
-                    <p className="text-sm font-medium">
-                      {tag.name}{" "}
-                      <span className="text-xs text-ink-soft">
-                        [{tag.types.join("/")}]
-                        {tag.custom ? " · custom" : ""}
-                      </span>
-                    </p>
-                    <p className="text-xs text-ink-soft">{tag.description}</p>
+              filteredByType.map((group) => (
+                <div key={group.type}>
+                  <div className="sticky top-0 z-10 mb-2 flex items-center gap-2 bg-paper/95 py-1 backdrop-blur-sm">
+                    <span
+                      className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold tracking-wide ${group.meta.badgeClass}`}
+                    >
+                      [{group.meta.symbol}] {group.meta.label}
+                    </span>
+                    <span className="text-[10px] text-ink-soft">
+                      {group.meta.coin} · {group.tags.length}
+                    </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => addTag(tag.id, tag)}
-                    className="shrink-0 rounded-lg bg-accent px-2 py-1 text-xs text-paper hover:bg-accent-deep"
-                  >
-                    Add
-                  </button>
-                </li>
+                  <ul className="space-y-2">
+                    {group.tags.map((tag) => (
+                      <li
+                        key={tag.id}
+                        className={`flex items-start justify-between gap-2 rounded-xl border border-line border-l-4 bg-paper-deep/20 px-3 py-2 ${TAG_TYPE_META[primaryTagType(tag.types)].rowAccentClass}`}
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{tag.name}</p>
+                          <div className="mt-1">
+                            <TagTypeBadges types={tag.types} />
+                            {tag.custom ? (
+                              <span className="ml-1 text-[10px] text-ink-soft">
+                                custom
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 text-xs text-ink-soft">
+                            {tag.description}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addTag(tag.id, tag)}
+                          className="shrink-0 rounded-lg bg-accent px-2 py-1 text-xs text-paper hover:bg-accent-deep"
+                        >
+                          Add
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ))
             )}
-          </ul>
+          </div>
 
           <div className="mt-5 border-t border-line pt-4">
             <h3 className="font-medium">Create custom tag</h3>
@@ -659,13 +735,16 @@ export function ItemCostCalculator({
                 rows={2}
                 className="w-full rounded-lg border border-line px-3 py-2 text-sm"
               />
+              <p className="text-[11px] text-ink-soft">Tag types (PDF colors)</p>
               <div className="flex flex-wrap gap-2">
                 {ALL_TYPES.map((type) => {
                   const on = newTypes.includes(type);
+                  const meta = TAG_TYPE_META[type];
                   return (
                     <button
                       key={type}
                       type="button"
+                      data-active={on}
                       onClick={() =>
                         setNewTypes((prev) =>
                           on
@@ -673,13 +752,9 @@ export function ItemCostCalculator({
                             : [...prev, type],
                         )
                       }
-                      className={`rounded-md px-2 py-1 text-xs ${
-                        on
-                          ? "bg-accent text-paper"
-                          : "border border-line text-ink-soft"
-                      }`}
+                      className={`rounded-md border px-2 py-1 text-xs font-medium ${meta.chipClass}`}
                     >
-                      {type}
+                      [{meta.symbol}] {meta.label}
                     </button>
                   );
                 })}
@@ -754,6 +829,25 @@ export function ItemCostCalculator({
         </div>
       </section>
     </div>
+  );
+}
+
+function TagTypeBadges({ types }: { types: TagType[] }) {
+  return (
+    <span className="inline-flex flex-wrap gap-1">
+      {types.map((type) => {
+        const meta = TAG_TYPE_META[type];
+        return (
+          <span
+            key={type}
+            title={`${meta.label} (${meta.coin})`}
+            className={`inline-flex rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide ${meta.badgeClass}`}
+          >
+            [{meta.symbol}]
+          </span>
+        );
+      })}
+    </span>
   );
 }
 
