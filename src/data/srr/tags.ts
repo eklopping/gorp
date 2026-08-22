@@ -695,7 +695,9 @@ export const BUILTIN_TAGS: TagDefinition[] = [
     id: "durable",
     name: "Durable",
     types: ["I"],
-    description: "+3 Temporary Wear (combine with other temp Wear). Not for refillables.",
+    description:
+      "+3 Temporary Wear (combine with other temp Wear). Any item except refillables — available on all profiles including armor.",
+    // General use (*Any Item except Refillables): no compatibleSlots / forbiddenProfileIds
   },
   {
     id: "lightweight",

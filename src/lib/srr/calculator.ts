@@ -359,7 +359,15 @@ export function calculateItem(input: CalcInput): CalcResult {
 
 export function mergeTagRepos(custom: TagDefinition[]): TagDefinition[] {
   const map = new Map<string, TagDefinition>();
-  for (const tag of BUILTIN_TAGS) map.set(tag.id, tag);
-  for (const tag of custom) map.set(tag.id, { ...tag, custom: true });
+  const builtinIds = new Set<string>();
+  for (const tag of BUILTIN_TAGS) {
+    map.set(tag.id, tag);
+    builtinIds.add(tag.id);
+  }
+  for (const tag of custom) {
+    // Never let a campaign/local copy override built-in slot rules (e.g. Durable).
+    if (builtinIds.has(tag.id)) continue;
+    map.set(tag.id, { ...tag, custom: true });
+  }
   return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
