@@ -17,9 +17,10 @@ export const ITEM_PROFILES: ItemProfile[] = [
     category: "Weapon",
     slots: ["melee-2h"],
     startingWear: 3,
-    coin: 3,
+    coin: 4,
     loadMod: 1,
-    notes: "Base Damage Strength+1d10. Unwieldy when used one-handed.",
+    notes:
+      "Base Damage Strength+1d10. Unwieldy when used one-handed. Two-Handed.",
     inherentTags: ["unwieldy-1h"],
   },
   {
@@ -30,8 +31,7 @@ export const ITEM_PROFILES: ItemProfile[] = [
     startingWear: 2,
     coin: 1,
     loadMod: 0,
-    notes: "Range 8/16/32. Damage 1d10. Cannot take Brutal. Two-Handed.",
-    forbiddenTagIds: ["brutal"],
+    notes: "Zone: The Boarder. Damage 1d8. Two-Handed. Uses Ammunition.",
   },
   {
     id: "crossbow",
@@ -41,7 +41,8 @@ export const ITEM_PROFILES: ItemProfile[] = [
     startingWear: 2,
     coin: 2,
     loadMod: 1,
-    notes: "Range 10/20/40. Damage 2d4. Reload(2), Piercing. Two-Handed.",
+    notes:
+      "Zone: The Crossroads. Damage 1d10. Piercing. Reload −2. Unwieldy one-handed. Two-Handed.",
     inherentTags: ["reload", "piercing", "unwieldy-1h"],
   },
   {
@@ -52,7 +53,9 @@ export const ITEM_PROFILES: ItemProfile[] = [
     startingWear: 1,
     coin: 1,
     loadMod: 0,
-    notes: "Range 5/10/20. Damage 1d4+Str. Free Ammo. One-Handed.",
+    notes:
+      "Zone: The Crossroads. Damage 1d4+Str. Free Ammo. One-Handed.",
+    inherentTags: ["free-ammo"],
   },
   {
     id: "rifle",
@@ -60,23 +63,25 @@ export const ITEM_PROFILES: ItemProfile[] = [
     category: "Weapon",
     slots: ["ranged-advanced"],
     startingWear: 2,
-    coin: 4,
+    coin: 6,
     loadMod: 1,
-    notes: "Range 12/24/48. Damage 1d12+2. Reload(6). Two-Handed.",
+    notes:
+      "Zone: The Reach. Damage 1d12+2. Reload −6. Unwieldy one-handed. Two-Handed. Advanced Ammunition / Misfires.",
     inherentTags: ["reload", "unwieldy-1h"],
-    forbiddenTagIds: ["brutal", "piercing", "reload"],
+    forbiddenTagIds: ["piercing", "reload"],
   },
   {
     id: "shotgun",
-    name: "Shotgun (Advanced Ranged)",
+    name: "Blunderbuss (Advanced Ranged)",
     category: "Weapon",
     slots: ["ranged-advanced"],
     startingWear: 3,
-    coin: 4,
+    coin: 5,
     loadMod: 1,
-    notes: "5' cone. Damage 2d4+2. Reload(6). Two-Handed.",
+    notes:
+      "Zone: The Fray to The Crossroads (hits groups). Damage 2d4+2. Reload −6. Unwieldy one-handed. Two-Handed.",
     inherentTags: ["reload", "unwieldy-1h"],
-    forbiddenTagIds: ["brutal", "piercing", "reload"],
+    forbiddenTagIds: ["piercing", "reload"],
   },
   {
     id: "pistol",
@@ -84,11 +89,12 @@ export const ITEM_PROFILES: ItemProfile[] = [
     category: "Weapon",
     slots: ["ranged-advanced"],
     startingWear: 2,
-    coin: 3,
+    coin: 4,
     loadMod: 0,
-    notes: "Range 5/10/20. Damage 1d10+1. Reload(4). One-Handed.",
+    notes:
+      "Zone: The Border. Damage 1d10+1. Reload −4. One-Handed. Advanced Ammunition / Misfires.",
     inherentTags: ["reload"],
-    forbiddenTagIds: ["brutal", "piercing", "reload"],
+    forbiddenTagIds: ["piercing", "reload"],
   },
   {
     id: "shield",
@@ -98,7 +104,7 @@ export const ITEM_PROFILES: ItemProfile[] = [
     startingWear: 2,
     coin: 1,
     loadMod: 0,
-    notes: "Starts with Reinforced [B](1). One-Handed.",
+    notes: "Base Toughness 0. Starts with Reinforced [B](1). One-Handed.",
     inherentTags: ["reinforced"],
   },
   {
@@ -112,7 +118,8 @@ export const ITEM_PROFILES: ItemProfile[] = [
     maxWear: 4,
     minLoad: 0,
     freeStartingTags: 1,
-    notes: "Max Wear 4. Load may be 0 (max 2). +1 free starting tag or Memorable.",
+    notes:
+      "Max Wear 4. Load 0–2. +1 free starting tag or Memorable [NA]. One-Handed (use discretion).",
   },
   {
     id: "light-armor",
@@ -122,7 +129,7 @@ export const ITEM_PROFILES: ItemProfile[] = [
     startingWear: 3,
     coin: 1,
     loadMod: 0,
-    notes: "Base Toughness 0.",
+    notes: "Leather, armored coat. Base Toughness 0.",
   },
   {
     id: "medium-armor",
@@ -130,9 +137,9 @@ export const ITEM_PROFILES: ItemProfile[] = [
     category: "Armor",
     slots: ["armor-medium", "clothing"],
     startingWear: 4,
-    coin: 2,
-    loadMod: 1,
-    notes: "Base Toughness 1.",
+    coin: 4,
+    loadMod: 2,
+    notes: "Brigandine, chain shirt. Base Toughness 1. +2 Load. d6 Strength requirement.",
   },
   {
     id: "heavy-armor",
@@ -140,9 +147,10 @@ export const ITEM_PROFILES: ItemProfile[] = [
     category: "Armor",
     slots: ["armor-heavy"],
     startingWear: 6,
-    coin: 4,
-    loadMod: 2,
-    notes: "Base Toughness 3. Starts Reinforced [B](1). -1 Agility.",
+    coin: 8,
+    loadMod: 3,
+    notes:
+      "Platemail / battle suit. Base Toughness 3. Starts Reinforced [B](1). +3 Load. d8 Strength requirement.",
     inherentTags: ["reinforced"],
   },
 ];
