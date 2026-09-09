@@ -1,15 +1,19 @@
 import type { Metadata } from "next";
-import { Figtree, Fraunces } from "next/font/google";
+import { Cormorant_Garamond, Lora } from "next/font/google";
 import "./globals.css";
 
-const figtree = Figtree({
-  variable: "--font-figtree",
+const cormorant = Cormorant_Garamond({
+  variable: "--font-heading",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
+  style: ["normal", "italic"],
 });
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+const lora = Lora({
+  variable: "--font-body",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
 });
 
 export const metadata: Metadata = {
@@ -25,9 +29,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${figtree.variable} ${fraunces.variable} h-full antialiased`}
+      className={`${cormorant.variable} ${lora.variable} h-full antialiased`}
     >
-      <body className="relative min-h-full flex flex-col text-ink">
+      <body className="relative flex min-h-full flex-col text-text">
         <div className="relative z-10 flex min-h-full flex-1 flex-col">
           {children}
         </div>

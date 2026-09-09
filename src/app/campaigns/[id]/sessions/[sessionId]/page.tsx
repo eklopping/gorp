@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CampaignNav } from "@/components/campaign-nav";
 import { LiveDocEditor } from "@/components/live-doc-editor";
-import { SiteHeader } from "@/components/site-header";
 import { Panel } from "@/components/ui";
 import { getGameSession } from "@/lib/actions";
 import { deleteGameSessionAction } from "@/lib/fate-actions";
-import { requireCampaignMember } from "@/lib/session";
+import {
+  CampaignChrome,
+  loadCampaignChrome,
+} from "@/components/campaign-chrome";
 
 export default async function SessionDetailPage({
   params,
@@ -14,7 +15,8 @@ export default async function SessionDetailPage({
   params: Promise<{ id: string; sessionId: string }>;
 }) {
   const { id, sessionId } = await params;
-  const { session } = await requireCampaignMember(id);
+  const { session, membership, campaign, counts } =
+    await loadCampaignChrome(id);
   const gameSession = await getGameSession(id, sessionId);
   if (!gameSession) notFound();
 
@@ -24,16 +26,21 @@ export default async function SessionDetailPage({
   }
 
   return (
-    <>
-      <SiteHeader userName={session.user.name} />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-6 pb-16">
+    <CampaignChrome
+      campaignId={id}
+      campaignName={campaign.name}
+      userName={session.user.name}
+      userRole={membership.role}
+      active="sessions"
+      counts={counts}
+    >
+      <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-8 pb-16">
         <Link
           href={`/campaigns/${id}`}
           className="text-sm text-ink-soft hover:text-accent-deep"
         >
           ← Back to campaign
         </Link>
-        <CampaignNav campaignId={id} active="sessions" />
         <Panel className="mt-4">
           <h1 className="font-[family-name:var(--font-display)] text-3xl">
             Edit session notes
@@ -80,6 +87,6 @@ export default async function SessionDetailPage({
           </form>
         </Panel>
       </main>
-    </>
+    </CampaignChrome>
   );
 }

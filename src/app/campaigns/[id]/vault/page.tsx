@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
-import { CampaignNav } from "@/components/campaign-nav";
 import { ItemCostCalculator } from "@/components/item-cost-calculator";
-import { SiteHeader } from "@/components/site-header";
 import { VaultItemList } from "@/components/vault-item-list";
-import { getCampaignById } from "@/lib/actions";
-import { requireCampaignMember } from "@/lib/session";
 import { listCampaignTags, listActiveCampaignPlayers, listVaultItems } from "@/lib/vault-actions";
+import {
+  CampaignChrome,
+  loadCampaignChrome,
+} from "@/components/campaign-chrome";
 
 export default async function VaultPage({
   params,
@@ -13,9 +13,8 @@ export default async function VaultPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { session, membership } = await requireCampaignMember(id);
-  const campaign = await getCampaignById(id);
-  if (!campaign) notFound();
+  const { session, membership, campaign, counts } =
+    await loadCampaignChrome(id);
 
   const [tags, items, players] = await Promise.all([
     listCampaignTags(id),
@@ -24,9 +23,15 @@ export default async function VaultPage({
   ]);
 
   return (
-    <>
-      <SiteHeader userName={session.user.name} />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-16">
+    <CampaignChrome
+      campaignId={id}
+      campaignName={campaign.name}
+      userName={session.user.name}
+      userRole={membership.role}
+      active="vault"
+      counts={counts}
+    >
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8 pb-16">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-ink-soft">
             {campaign.name}
@@ -39,8 +44,6 @@ export default async function VaultPage({
             creator player, with in-progress / finished tracking for the table.
           </p>
         </div>
-
-        <CampaignNav campaignId={id} active="vault" />
 
         <section className="mt-8">
           <ItemCostCalculator
@@ -68,6 +71,6 @@ export default async function VaultPage({
           />
         </section>
       </main>
-    </>
+    </CampaignChrome>
   );
 }

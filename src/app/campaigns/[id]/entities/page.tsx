@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CampaignNav } from "@/components/campaign-nav";
 import { EntityCard } from "@/components/entity-card";
-import { SiteHeader } from "@/components/site-header";
 import { Panel } from "@/components/ui";
 import { listCampaignEntities } from "@/lib/entity-actions";
-import { getCampaignById } from "@/lib/actions";
-import { requireCampaignMember } from "@/lib/session";
+import {
+  CampaignChrome,
+  loadCampaignChrome,
+} from "@/components/campaign-chrome";
 
 export default async function EntitiesPage({
   params,
@@ -17,18 +17,23 @@ export default async function EntitiesPage({
 }) {
   const { id } = await params;
   const { q, type } = await searchParams;
-  const { session } = await requireCampaignMember(id);
-  const campaign = await getCampaignById(id);
-  if (!campaign) notFound();
+  const { session, membership, campaign, counts } =
+    await loadCampaignChrome(id);
 
   const selectedType =
     type === "person" || type === "place" ? type : ("all" as const);
   const entities = await listCampaignEntities(id, q, selectedType);
 
   return (
-    <>
-      <SiteHeader userName={session.user.name} />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-6 pb-16">
+    <CampaignChrome
+      campaignId={id}
+      campaignName={campaign.name}
+      userName={session.user.name}
+      userRole={membership.role}
+      active="entities"
+      counts={counts}
+    >
+      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8 pb-16">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-ink-soft">
@@ -44,13 +49,11 @@ export default async function EntitiesPage({
           </div>
           <Link
             href={`/campaigns/${id}/entities/new`}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-paper hover:bg-accent-deep"
+            className="rounded-[var(--radius-md)] border border-[rgba(225,173,102,0.5)] px-[13px] py-1.5 text-[12.5px] text-accent transition hover:border-accent-300 hover:bg-[var(--accent-tint-11)]"
           >
             New ID card
           </Link>
         </div>
-
-        <CampaignNav campaignId={id} active="entities" />
 
         <form className="mt-6 flex flex-wrap gap-3">
           <input
@@ -91,6 +94,6 @@ export default async function EntitiesPage({
           )}
         </div>
       </main>
-    </>
+    </CampaignChrome>
   );
 }

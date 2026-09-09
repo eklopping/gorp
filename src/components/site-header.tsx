@@ -1,13 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 
-export function SiteHeader({
-  userName,
-}: {
-  userName?: string | null;
-}) {
+export function SiteHeader({ userName }: { userName?: string | null }) {
   return (
-    <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-6 py-4">
+    <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 border-b border-line-soft px-6 py-4">
       <Link
         href={userName ? "/dashboard" : "/"}
         className="group min-w-0 shrink"
@@ -19,16 +15,16 @@ export function SiteHeader({
           width={681}
           height={155}
           priority
-          className="h-14 w-auto max-w-[min(100%,22rem)] transition-transform duration-300 group-hover:-translate-y-0.5 sm:h-16 sm:max-w-[26rem] md:h-[4.5rem] md:max-w-[30rem]"
+          className="h-[30px] w-auto max-w-[min(100%,18rem)] sm:h-9"
         />
       </Link>
-      <nav className="flex shrink-0 items-center gap-3 text-sm">
+      <nav className="flex shrink-0 items-center gap-3 text-[12.5px]">
         {userName ? (
           <>
-            <span className="hidden text-ink-soft sm:inline">{userName}</span>
+            <span className="hidden text-muted sm:inline">{userName}</span>
             <Link
               href="/dashboard"
-              className="rounded-md border border-line px-3 py-1.5 transition hover:border-accent hover:text-accent-deep"
+              className="rounded-[var(--radius-md)] border border-line px-3 py-1.5 text-text-3 transition hover:border-accent-line hover:text-accent"
             >
               Campaigns
             </Link>
@@ -37,13 +33,13 @@ export function SiteHeader({
           <>
             <Link
               href="/login"
-              className="rounded-md px-3 py-1.5 transition hover:text-accent-deep"
+              className="rounded-[var(--radius-md)] px-3 py-1.5 text-text-3 transition hover:text-accent"
             >
               Log in
             </Link>
             <Link
               href="/signup"
-              className="rounded-md bg-accent px-3 py-1.5 text-paper transition hover:bg-accent-deep"
+              className="rounded-[var(--radius-md)] border border-[rgba(225,173,102,0.5)] px-3 py-1.5 text-accent transition hover:border-accent-300 hover:bg-[var(--accent-tint-11)]"
             >
               Sign up
             </Link>

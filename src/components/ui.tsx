@@ -9,7 +9,7 @@ export function Panel({
 }) {
   return (
     <section
-      className={`rounded-2xl border border-line bg-paper/70 p-6 shadow-[0_20px_60px_-40px_rgba(20,32,28,0.55)] backdrop-blur-sm ${className}`}
+      className={`rounded-[var(--radius-lg)] border border-line bg-surface/80 p-6 shadow-[var(--shadow-card)] ${className}`}
     >
       {children}
     </section>
@@ -36,11 +36,11 @@ export function Field({
   rows?: number;
 }) {
   const shared =
-    "mt-1.5 w-full rounded-lg border border-line bg-paper-deep/40 px-3 py-2 text-ink outline-none transition focus:border-accent focus:bg-paper";
+    "mt-1.5 w-full rounded-[var(--radius-md)] border border-line-strong bg-transparent px-3 py-2 text-text outline-none transition placeholder:text-muted-3 focus:border-accent focus:bg-[var(--accent-tint-04)]";
 
   return (
-    <label className="block text-sm text-ink-soft">
-      <span className="font-medium text-ink">{label}</span>
+    <label className="block text-sm text-text-3">
+      <span className="text-text">{label}</span>
       {as === "textarea" ? (
         <textarea
           name={name}
@@ -79,18 +79,44 @@ export function Button({
 }) {
   const styles =
     variant === "primary"
-      ? "bg-accent text-paper hover:bg-accent-deep"
+      ? "border border-[rgba(225,173,102,0.5)] text-accent hover:border-accent-300 hover:bg-[var(--accent-tint-11)]"
       : variant === "danger"
-        ? "bg-warn/90 text-paper hover:bg-warn"
-        : "border border-line hover:border-accent hover:text-accent-deep";
+        ? "border border-warn/60 text-warn hover:bg-warn/10"
+        : "border border-line text-text-3 hover:border-accent-line hover:text-accent";
 
   return (
     <button
       type={type}
       formAction={formAction}
-      className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition ${styles} ${className}`}
+      className={`inline-flex items-center justify-center rounded-[var(--radius-md)] px-[13px] py-1.5 text-[12.5px] transition disabled:opacity-45 ${styles} ${className}`}
     >
       {children}
     </button>
+  );
+}
+
+/** Hairline that stretches between a title and a trailing action. */
+export function TitleRule({
+  title,
+  action,
+  meta,
+  as: Tag = "h1",
+}: {
+  title: ReactNode;
+  action?: ReactNode;
+  meta?: ReactNode;
+  as?: "h1" | "h2";
+}) {
+  return (
+    <div className="flex flex-wrap items-end gap-3">
+      <div className="min-w-0">
+        <Tag className="font-[family-name:var(--font-heading)] text-[32px] font-normal leading-tight tracking-tight text-text">
+          {title}
+        </Tag>
+        {meta ? <div className="mt-1 text-[11px] tabular text-muted">{meta}</div> : null}
+      </div>
+      <div className="mb-2 h-px min-w-[2rem] flex-1 bg-[var(--line)]" />
+      {action ? <div className="mb-1 shrink-0">{action}</div> : null}
+    </div>
   );
 }

@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CampaignNav } from "@/components/campaign-nav";
-import { SiteHeader } from "@/components/site-header";
 import { Panel } from "@/components/ui";
-import { getCampaignById } from "@/lib/actions";
 import { listCampaignMaps } from "@/lib/entity-actions";
-import { requireCampaignMember } from "@/lib/session";
 import { uploadUrl } from "@/lib/upload-url";
+import {
+  CampaignChrome,
+  loadCampaignChrome,
+} from "@/components/campaign-chrome";
 
 export default async function MapsPage({
   params,
@@ -14,16 +14,21 @@ export default async function MapsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { session } = await requireCampaignMember(id);
-  const campaign = await getCampaignById(id);
-  if (!campaign) notFound();
+  const { session, membership, campaign, counts } =
+    await loadCampaignChrome(id);
 
   const maps = await listCampaignMaps(id);
 
   return (
-    <>
-      <SiteHeader userName={session.user.name} />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-6 pb-16">
+    <CampaignChrome
+      campaignId={id}
+      campaignName={campaign.name}
+      userName={session.user.name}
+      userRole={membership.role}
+      active="maps"
+      counts={counts}
+    >
+      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8 pb-16">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-ink-soft">
@@ -39,13 +44,11 @@ export default async function MapsPage({
           </div>
           <Link
             href={`/campaigns/${id}/maps/new`}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-paper hover:bg-accent-deep"
+            className="rounded-[var(--radius-md)] border border-[rgba(225,173,102,0.5)] px-[13px] py-1.5 text-[12.5px] text-accent transition hover:border-accent-300 hover:bg-[var(--accent-tint-11)]"
           >
             Import map
           </Link>
         </div>
-
-        <CampaignNav campaignId={id} active="maps" />
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           {maps.length === 0 ? (
@@ -60,7 +63,7 @@ export default async function MapsPage({
               <Link
                 key={map.id}
                 href={`/campaigns/${id}/maps/${map.id}`}
-                className="group overflow-hidden rounded-2xl border border-line bg-paper/70 transition hover:-translate-y-0.5 hover:border-accent"
+                className="group overflow-hidden rounded-[var(--radius-lg)] border border-line bg-surface/70 transition hover:border-accent-line"
               >
                 <div className="aspect-[16/10] overflow-hidden bg-paper-deep/50">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -80,6 +83,6 @@ export default async function MapsPage({
           )}
         </div>
       </main>
-    </>
+    </CampaignChrome>
   );
 }

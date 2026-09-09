@@ -13,13 +13,13 @@ export default async function DashboardPage() {
       <SiteHeader userName={session.user.name} />
       <main className="mx-auto grid w-full max-w-5xl flex-1 gap-8 px-6 pb-16 lg:grid-cols-[1.1fr_0.9fr]">
         <section>
-          <h1 className="font-[family-name:var(--font-display)] text-4xl tracking-tight">
+          <h1 className="font-[family-name:var(--font-heading)] text-4xl font-normal tracking-tight">
             Your campaigns
           </h1>
-          <p className="mt-2 text-sm text-ink-soft">
+          <p className="mt-2 text-sm text-text-3">
             Open a table you belong to, or create one as GM and invite players.
             The item calculator lives under each campaign&apos;s{" "}
-            <span className="font-medium text-ink">Gear</span> tab.
+            <span className="text-text">Gear</span> tab.
           </p>
 
           <div className="mt-6 space-y-3">
@@ -35,7 +35,7 @@ export default async function DashboardPage() {
                 <Link
                   key={campaign.id}
                   href={`/campaigns/${campaign.id}`}
-                  className="block rounded-2xl border border-line bg-paper/60 px-5 py-4 transition hover:-translate-y-0.5 hover:border-accent"
+                  className="block rounded-[var(--radius-lg)] border border-line bg-surface/60 px-5 py-4 transition hover:border-accent-line hover:bg-[var(--accent-tint-04)]"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>

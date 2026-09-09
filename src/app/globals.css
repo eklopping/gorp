@@ -1,54 +1,107 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #14201c;
-  --ink-soft: #2a3b34;
-  --paper: #dfe6df;
-  --paper-deep: #c9d4cb;
-  --mist: #a8b9ae;
-  --accent: #1f6f5b;
-  --accent-deep: #155445;
-  --warn: #8a3b2b;
-  --line: color-mix(in oklab, var(--ink) 14%, transparent);
-  --glow: color-mix(in oklab, var(--accent) 18%, transparent);
-  --background: var(--paper);
-  --foreground: var(--ink);
+  /* Classical dark "GM screen" ground */
+  --page: #1a1815;
+  --surface: #1d1b17;
+  --surface-2: #221f1a;
+  --surface-3: #241f18;
+
+  /* Ink */
+  --text: #f0ece4;
+  --text-2: #ddd6c8;
+  --text-3: #c6bfb2;
+  --text-4: #a8a196;
+  --muted: #8d867a;
+  --muted-2: #7e776c;
+  --muted-3: #6f695f;
+  --faint: #5f5a51;
+
+  /* Accent — Classical gold; 400 is the dark-ground interactive base */
+  --accent: #e1ad66;
+  --accent-rule: #b68235;
+  --accent-300: #facb8d;
+  --accent-tint-04: rgba(225, 173, 102, 0.04);
+  --accent-tint-11: rgba(225, 173, 102, 0.11);
+  --accent-tint-16: rgba(225, 173, 102, 0.16);
+  --accent-tint-24: rgba(225, 173, 102, 0.24);
+
+  /* Hairlines */
+  --line: rgba(240, 236, 228, 0.14);
+  --line-soft: rgba(240, 236, 228, 0.09);
+  --line-faint: rgba(240, 236, 228, 0.07);
+  --line-strong: rgba(240, 236, 228, 0.18);
+  --accent-line: rgba(225, 173, 102, 0.35);
+  --accent-line-soft: rgba(225, 173, 102, 0.28);
+
+  /* Elevation */
+  --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.5);
+  --shadow-popover: 0 18px 44px rgba(0, 0, 0, 0.6);
+
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 7px;
+  --radius-panel: 5px;
+
+  --warn: #c45c4a;
+
+  /* Legacy aliases — existing components keep working during the phased revamp */
+  --ink: var(--text);
+  --ink-soft: var(--text-3);
+  --paper: var(--surface);
+  --paper-deep: var(--surface-2);
+  --mist: var(--muted);
+  --accent-deep: var(--accent-300);
+  --glow: var(--accent-tint-11);
+  --background: var(--page);
+  --foreground: var(--text);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-text-4: var(--text-4);
+  --color-muted: var(--muted);
+  --color-muted-2: var(--muted-2);
+  --color-muted-3: var(--muted-3);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-rule: var(--accent-rule);
+  --color-accent-300: var(--accent-300);
+  --color-accent-line: var(--accent-line);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-line-faint: var(--line-faint);
+  --color-line-strong: var(--line-strong);
+  --color-warn: var(--warn);
+  /* Legacy theme colors */
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
   --color-paper: var(--paper);
   --color-paper-deep: var(--paper-deep);
   --color-mist: var(--mist);
-  --color-accent: var(--accent);
   --color-accent-deep: var(--accent-deep);
-  --color-warn: var(--warn);
-  --color-line: var(--line);
-  --font-sans: var(--font-figtree);
-  --font-display: var(--font-fraunces);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-heading);
 }
 
 body {
-  background:
-    radial-gradient(1200px 700px at 12% -10%, var(--glow), transparent 55%),
-    radial-gradient(900px 600px at 90% 0%, color-mix(in oklab, var(--mist) 35%, transparent), transparent 50%),
-    linear-gradient(165deg, #e8eee8 0%, var(--paper) 42%, #d5ddd6 100%);
+  background: var(--page);
   color: var(--foreground);
-  font-family: var(--font-sans), sans-serif;
+  font-family: var(--font-body), serif;
   min-height: 100vh;
+  font-variant-numeric: proportional-nums;
 }
 
 body::before {
-  content: "";
-  pointer-events: none;
-  position: fixed;
-  inset: 0;
-  opacity: 0.045;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  z-index: 0;
+  content: none;
 }
 
 a {
@@ -57,7 +110,35 @@ a {
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--accent) 35%, white);
+  background: var(--accent-tint-24);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.kicker {
+  font-family: var(--font-body), serif;
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.prose-classical {
+  color: var(--text-2);
+  font-size: 14.5px;
+  line-height: 1.85;
+  text-align: justify;
+  text-wrap: pretty;
+  max-width: 68ch;
 }
 
 @keyframes fade-rise {
@@ -69,6 +150,21 @@ a {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes caret-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.caret-blink {
+  animation: caret-blink 1.1s steps(1) infinite;
 }
 
 @keyframes fate-dash {
@@ -114,4 +210,3 @@ a {
   height: 0;
   width: 0;
 }
-

@@ -1,15 +1,14 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { notFound } from "next/navigation";
 import {
   getActiveInvite,
-  getCampaignById,
   listCampaignMembers,
 } from "@/lib/actions";
-import { requireCampaignMember } from "@/lib/session";
 import { MembersManager } from "@/components/members-manager";
-import { CampaignNav } from "@/components/campaign-nav";
-import { SiteHeader } from "@/components/site-header";
+import {
+  CampaignChrome,
+  loadCampaignChrome,
+} from "@/components/campaign-chrome";
 
 export default async function MembersPage({
   params,
@@ -17,9 +16,8 @@ export default async function MembersPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { session, membership } = await requireCampaignMember(id);
-  const campaign = await getCampaignById(id);
-  if (!campaign) notFound();
+  const { session, membership, campaign, counts } =
+    await loadCampaignChrome(id);
 
   const members = await listCampaignMembers(id);
   const invite = await getActiveInvite(id);
@@ -29,9 +27,15 @@ export default async function MembersPage({
   const origin = host ? `${proto}://${host}` : "http://localhost:3000";
 
   return (
-    <>
-      <SiteHeader userName={session.user.name} />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-6 pb-16">
+    <CampaignChrome
+      campaignId={id}
+      campaignName={campaign.name}
+      userName={session.user.name}
+      userRole={membership.role}
+      active="members"
+      counts={counts}
+    >
+      <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-8 pb-16">
         <Link
           href={`/campaigns/${id}`}
           className="text-sm text-ink-soft hover:text-accent-deep"
@@ -41,7 +45,6 @@ export default async function MembersPage({
         <h1 className="mt-4 font-[family-name:var(--font-display)] text-4xl tracking-tight">
           Members & invites
         </h1>
-        <CampaignNav campaignId={id} active="members" />
         <div className="mt-6">
           <MembersManager
             campaignId={id}
@@ -61,6 +64,6 @@ export default async function MembersPage({
           />
         </div>
       </main>
-    </>
+    </CampaignChrome>
   );
 }

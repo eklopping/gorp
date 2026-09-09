@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { createGameSessionAction } from "@/lib/actions";
-import { requireCampaignMember } from "@/lib/session";
-import { CampaignNav } from "@/components/campaign-nav";
-import { SiteHeader } from "@/components/site-header";
 import { MarkdownField } from "@/components/markdown-field";
 import { Button, Field, Panel } from "@/components/ui";
+import {
+  CampaignChrome,
+  loadCampaignChrome,
+} from "@/components/campaign-chrome";
 
 export default async function NewSessionPage({
   params,
@@ -12,7 +13,8 @@ export default async function NewSessionPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { session } = await requireCampaignMember(id);
+  const { session, membership, campaign, counts } =
+    await loadCampaignChrome(id);
 
   async function action(formData: FormData) {
     "use server";
@@ -20,16 +22,21 @@ export default async function NewSessionPage({
   }
 
   return (
-    <>
-      <SiteHeader userName={session.user.name} />
-      <main className="mx-auto w-full max-w-2xl flex-1 px-6 pb-16">
+    <CampaignChrome
+      campaignId={id}
+      campaignName={campaign.name}
+      userName={session.user.name}
+      userRole={membership.role}
+      active="sessions"
+      counts={counts}
+    >
+      <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-8 pb-16">
         <Link
           href={`/campaigns/${id}`}
           className="text-sm text-ink-soft hover:text-accent-deep"
         >
           ← Back to campaign
         </Link>
-        <CampaignNav campaignId={id} active="sessions" />
         <Panel className="mt-4">
           <h1 className="font-[family-name:var(--font-display)] text-3xl">
             New session notes
@@ -56,6 +63,6 @@ export default async function NewSessionPage({
           </form>
         </Panel>
       </main>
-    </>
+    </CampaignChrome>
   );
 }

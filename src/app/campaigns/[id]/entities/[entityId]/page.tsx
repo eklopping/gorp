@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CampaignNav } from "@/components/campaign-nav";
 import { LiveDocEditor } from "@/components/live-doc-editor";
-import { SiteHeader } from "@/components/site-header";
 import { Button, Field, Panel } from "@/components/ui";
 import { listCampaignGameSessions } from "@/lib/actions";
 import {
@@ -12,8 +10,11 @@ import {
   updateEntityPortraitAction,
 } from "@/lib/entity-actions";
 import { deleteEntityAction } from "@/lib/fate-actions";
-import { requireCampaignMember } from "@/lib/session";
 import { uploadUrl } from "@/lib/upload-url";
+import {
+  CampaignChrome,
+  loadCampaignChrome,
+} from "@/components/campaign-chrome";
 
 export default async function EntityDetailPage({
   params,
@@ -21,7 +22,8 @@ export default async function EntityDetailPage({
   params: Promise<{ id: string; entityId: string }>;
 }) {
   const { id, entityId } = await params;
-  const { session } = await requireCampaignMember(id);
+  const { session, membership, campaign, counts } =
+    await loadCampaignChrome(id);
   const entity = await getEntity(id, entityId);
   if (!entity) notFound();
 
@@ -44,16 +46,21 @@ export default async function EntityDetailPage({
   }
 
   return (
-    <>
-      <SiteHeader userName={session.user.name} />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-6 pb-16">
+    <CampaignChrome
+      campaignId={id}
+      campaignName={campaign.name}
+      userName={session.user.name}
+      userRole={membership.role}
+      active="entities"
+      counts={counts}
+    >
+      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8 pb-16">
         <Link
           href={`/campaigns/${id}/entities`}
           className="text-sm text-ink-soft hover:text-accent-deep"
         >
           ← Back to ID cards
         </Link>
-        <CampaignNav campaignId={id} active="entities" />
 
         <div className="mt-4 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <Panel>
@@ -233,6 +240,6 @@ export default async function EntityDetailPage({
           </div>
         </div>
       </main>
-    </>
+    </CampaignChrome>
   );
 }

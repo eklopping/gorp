@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import { CampaignNav } from "@/components/campaign-nav";
-import { SiteHeader } from "@/components/site-header";
 import { TravelTracker } from "@/components/travel-tracker";
-import { getCampaignById } from "@/lib/actions";
-import { requireCampaignMember } from "@/lib/session";
+import {
+  CampaignChrome,
+  loadCampaignChrome,
+} from "@/components/campaign-chrome";
 
 export default async function TravelPage({
   params,
@@ -11,14 +11,19 @@ export default async function TravelPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { session } = await requireCampaignMember(id);
-  const campaign = await getCampaignById(id);
-  if (!campaign) notFound();
+  const { session, membership, campaign, counts } =
+    await loadCampaignChrome(id);
 
   return (
-    <>
-      <SiteHeader userName={session.user.name} />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-16">
+    <CampaignChrome
+      campaignId={id}
+      campaignName={campaign.name}
+      userName={session.user.name}
+      userRole={membership.role}
+      active="travel"
+      counts={counts}
+    >
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8 pb-16">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-ink-soft">
             {campaign.name}
@@ -32,12 +37,10 @@ export default async function TravelPage({
           </p>
         </div>
 
-        <CampaignNav campaignId={id} active="travel" />
-
         <section className="mt-8">
           <TravelTracker />
         </section>
       </main>
-    </>
+    </CampaignChrome>
   );
 }
