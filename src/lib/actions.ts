@@ -11,6 +11,7 @@ import {
   campaigns,
   gameSessions,
 } from "./schema";
+import { indexSessionDoc } from "./search";
 import {
   getActiveMembership,
   requireCampaignGm,
@@ -275,15 +276,24 @@ export async function createGameSessionAction(
     .select({ value: max(gameSessions.sortOrder) })
     .from(gameSessions)
     .where(eq(gameSessions.campaignId, campaignId));
+  const sortOrder = (maxRow?.value ?? -1) + 1;
   await db.insert(gameSessions).values({
     id,
     campaignId,
     title,
     sessionDate: sessionDate || null,
     outline,
-    sortOrder: (maxRow?.value ?? -1) + 1,
+    sortOrder,
     createdBy: session.user.id,
     updatedBy: session.user.id,
+  });
+  indexSessionDoc({
+    id,
+    campaignId,
+    title,
+    outline,
+    sessionDate: sessionDate || null,
+    sortOrder,
   });
 
   redirect(`/campaigns/${campaignId}/sessions/${id}`);

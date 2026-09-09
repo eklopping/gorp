@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "./db";
 import { entities, gameSessions } from "./schema";
+import { removeSearchDoc } from "./search";
 import { requireCampaignMember } from "./session";
 import { orderedEntities, orderedSessions } from "./fate-order";
 
@@ -60,6 +61,7 @@ export async function deleteGameSessionAction(
         eq(gameSessions.campaignId, campaignId),
       ),
     );
+  removeSearchDoc(sessionId);
 
   revalidateCampaign(campaignId);
   redirect(`/campaigns/${campaignId}`);
@@ -76,6 +78,7 @@ export async function deleteEntityAction(
     .where(
       and(eq(entities.id, entityId), eq(entities.campaignId, campaignId)),
     );
+  removeSearchDoc(entityId);
 
   revalidateCampaign(campaignId);
   redirect(`/campaigns/${campaignId}/entities`);
@@ -224,6 +227,7 @@ export async function deleteGameSessionFromFateAction(
         eq(gameSessions.campaignId, campaignId),
       ),
     );
+  removeSearchDoc(sessionId);
 
   revalidateCampaign(campaignId);
   return { ok: true };
@@ -240,6 +244,7 @@ export async function deleteEntityFromFateAction(
     .where(
       and(eq(entities.id, entityId), eq(entities.campaignId, campaignId)),
     );
+  removeSearchDoc(entityId);
 
   revalidateCampaign(campaignId);
   return { ok: true };

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LiveDocEditor } from "@/components/live-doc-editor";
+import { parseItemsOfInterest } from "@/components/entity-card";
 import { Button, Field, Panel } from "@/components/ui";
 import { listCampaignGameSessions } from "@/lib/actions";
 import {
@@ -29,6 +30,7 @@ export default async function EntityDetailPage({
 
   const appearances = await listEntityAppearances(entityId);
   const sessions = await listCampaignGameSessions(id);
+  const interestPairs = parseItemsOfInterest(entity.itemsOfInterest);
 
   async function portraitAction(formData: FormData) {
     "use server";
@@ -125,6 +127,24 @@ export default async function EntityDetailPage({
                 ]}
               />
             </div>
+
+            {interestPairs.length > 0 ? (
+              <div className="mt-6 border-t border-line pt-4">
+                <p className="kicker">Items of interest</p>
+                <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {interestPairs.map((pair) => (
+                    <div key={`${pair.term}-${pair.def}`}>
+                      <dt className="font-[family-name:var(--font-heading)] text-[19px] text-text">
+                        {pair.term}
+                      </dt>
+                      <dd className="mt-0.5 text-[12.5px] text-text-3">
+                        {pair.def}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ) : null}
 
             <form
               action={portraitAction}

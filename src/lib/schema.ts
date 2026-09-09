@@ -391,3 +391,112 @@ export const vaultItemSavesRelations = relations(vaultItemSaves, ({ one }) => ({
     references: [user.id],
   }),
 }));
+
+/** Shared system rulebook (campaign-independent). */
+export const rulebooks = sqliteTable("rulebooks", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  version: text("version").notNull().default(""),
+  sourceType: text("source_type", { enum: ["markdown", "pdf"] }).notNull(),
+  sourcePath: text("source_path"),
+  importedAt: integer("imported_at", { mode: "timestamp_ms" }),
+  importedBy: text("imported_by").references(() => user.id),
+});
+
+export const rulebookSections = sqliteTable("rulebook_sections", {
+  id: text("id").primaryKey(),
+  rulebookId: text("rulebook_id")
+    .notNull()
+    .references(() => rulebooks.id, { onDelete: "cascade" }),
+  number: text("number").notNull(),
+  title: text("title").notNull(),
+  chapterNumber: text("chapter_number").notNull(),
+  chapterTitle: text("chapter_title").notNull(),
+  body: text("body").notNull().default(""),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const ruleCitations = sqliteTable("rule_citations", {
+  id: text("id").primaryKey(),
+  sectionId: text("section_id")
+    .notNull()
+    .references(() => rulebookSections.id, { onDelete: "cascade" }),
+  campaignId: text("campaign_id")
+    .notNull()
+    .references(() => campaigns.id, { onDelete: "cascade" }),
+  gameSessionId: text("game_session_id").references(() => gameSessions.id, {
+    onDelete: "cascade",
+  }),
+  entityId: text("entity_id").references(() => entities.id, {
+    onDelete: "cascade",
+  }),
+  excerpt: text("excerpt").notNull().default(""),
+});
+
+export const rulebookBookmarks = sqliteTable("rulebook_bookmarks", {
+  id: text("id").primaryKey(),
+  sectionId: text("section_id")
+    .notNull()
+    .references(() => rulebookSections.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+});
+
+export const rulebookQuickRefs = sqliteTable("rulebook_quick_refs", {
+  id: text("id").primaryKey(),
+  rulebookId: text("rulebook_id")
+    .notNull()
+    .references(() => rulebooks.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  summary: text("summary").notNull().default(""),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const rulebooksRelations = relations(rulebooks, ({ many }) => ({
+  sections: many(rulebookSections),
+  quickRefs: many(rulebookQuickRefs),
+}));
+
+export const rulebookSectionsRelations = relations(
+  rulebookSections,
+  ({ one, many }) => ({
+    rulebook: one(rulebooks, {
+      fields: [rulebookSections.rulebookId],
+      references: [rulebooks.id],
+    }),
+    citations: many(ruleCitations),
+    bookmarks: many(rulebookBookmarks),
+  }),
+);
+
+export const ruleCitationsRelations = relations(ruleCitations, ({ one }) => ({
+  section: one(rulebookSections, {
+    fields: [ruleCitations.sectionId],
+    references: [rulebookSections.id],
+  }),
+  campaign: one(campaigns, {
+    fields: [ruleCitations.campaignId],
+    references: [campaigns.id],
+  }),
+}));
+
+export const rulebookBookmarksRelations = relations(
+  rulebookBookmarks,
+  ({ one }) => ({
+    section: one(rulebookSections, {
+      fields: [rulebookBookmarks.sectionId],
+      references: [rulebookSections.id],
+    }),
+  }),
+);
+
+export const rulebookQuickRefsRelations = relations(
+  rulebookQuickRefs,
+  ({ one }) => ({
+    rulebook: one(rulebooks, {
+      fields: [rulebookQuickRefs.rulebookId],
+      references: [rulebooks.id],
+    }),
+  }),
+);

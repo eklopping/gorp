@@ -5,9 +5,9 @@ import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import {
-  CommandPaletteStub,
+  CommandPalette,
   SearchTrigger,
-} from "@/components/command-palette-stub";
+} from "@/components/command-palette";
 import {
   CAMPAIGN_NAV_GROUPS,
   groupForNavKey,
@@ -57,7 +57,7 @@ export function CampaignShell({
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <CommandPaletteStub />
+      <CommandPalette campaignId={campaignId} />
 
       {/* Brand bar — always present */}
       <header className="flex h-[58px] shrink-0 items-center gap-[22px] border-b border-line-soft px-6">

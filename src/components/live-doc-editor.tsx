@@ -7,11 +7,19 @@ import {
   wrapSelection,
 } from "@/components/markdown-view";
 import {
+  detectLinkTrigger,
+  formatLinkMarkdown,
+  LinkPicker,
+  type LinkInsertStyle,
+} from "@/components/link-picker";
+import {
   getLiveDocSnapshotAction,
   heartbeatLiveDocAction,
   patchLiveDocAction,
   type LiveDocType,
 } from "@/lib/live-doc-actions";
+import type { SearchHit } from "@/lib/search";
+import { citeRuleInSessionAction } from "@/lib/rulebook-actions";
 
 type FieldKind = "text" | "date" | "markdown";
 
@@ -63,6 +71,13 @@ export function LiveDocEditor({
   );
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [message, setMessage] = useState<string | null>(null);
+  const [linkField, setLinkField] = useState<string | null>(null);
+  const [linkQuery, setLinkQuery] = useState("");
+  const [linkReplace, setLinkReplace] = useState<{
+    start: number;
+    end: number;
+  } | null>(null);
+  const [linkPressed, setLinkPressed] = useState(false);
 
   const valuesRef = useRef(values);
   const updatedAtRef = useRef(updatedAt);
@@ -266,6 +281,78 @@ export function LiveDocEditor({
     });
   }
 
+  function openLinkPicker(key: string) {
+    const node = textRefs.current[key];
+    const current = valuesRef.current[key] ?? "";
+    const start = node?.selectionStart ?? current.length;
+    const end = node?.selectionEnd ?? current.length;
+    const selected = current.slice(start, end);
+    setLinkField(key);
+    setLinkQuery(selected);
+    setLinkReplace({ start, end });
+    setLinkPressed(true);
+  }
+
+  function insertCampaignLink(hit: SearchHit, style: LinkInsertStyle) {
+    if (!linkField) return;
+    const key = linkField;
+    const current = valuesRef.current[key] ?? "";
+    const node = textRefs.current[key];
+    const caret = node?.selectionStart ?? current.length;
+    const trigger = detectLinkTrigger(current, caret);
+    const snippet = formatLinkMarkdown(hit, style);
+
+    let next: string;
+    let selStart: number;
+    if (trigger) {
+      next = current.slice(0, trigger.start) + snippet + current.slice(caret);
+      selStart = trigger.start + snippet.length;
+    } else if (linkReplace) {
+      next =
+        current.slice(0, linkReplace.start) +
+        snippet +
+        current.slice(linkReplace.end);
+      selStart = linkReplace.start + snippet.length;
+    } else {
+      next = current.slice(0, caret) + snippet + current.slice(caret);
+      selStart = caret + snippet.length;
+    }
+
+    markDirty({ ...valuesRef.current, [key]: next });
+    setLinkField(null);
+    setLinkPressed(false);
+    setLinkReplace(null);
+
+    if (hit.docType === "rule" && docType === "session") {
+      void citeRuleInSessionAction({
+        campaignId,
+        sectionId: hit.docId,
+        gameSessionId: docId,
+        excerpt: hit.title,
+      });
+    }
+
+    requestAnimationFrame(() => {
+      const el = textRefs.current[key];
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(selStart, selStart);
+    });
+  }
+
+  function onMarkdownChange(key: string, value: string, caret: number) {
+    updateField(key, value);
+    const trigger = detectLinkTrigger(value, caret);
+    if (trigger) {
+      setLinkField(key);
+      setLinkQuery(trigger.query);
+      setLinkReplace({ start: trigger.start, end: caret });
+      setLinkPressed(false);
+    } else if (linkField === key && !linkPressed) {
+      setLinkField(null);
+    }
+  }
+
   const statusLabel =
     saveState === "saving"
       ? "Saving…"
@@ -316,9 +403,25 @@ export function LiveDocEditor({
         const value = values[field.key] ?? "";
         if (field.kind === "markdown") {
           return (
-            <label key={field.key} className="block text-sm text-ink-soft">
+            <label
+              key={field.key}
+              className="relative block text-sm text-ink-soft"
+            >
               <span className="font-medium text-ink">{field.label}</span>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <FormatButton
+                  label={
+                    <span className="font-[family-name:var(--font-heading)] text-[17px]">
+                      H2
+                    </span>
+                  }
+                  title="Heading"
+                  onClick={() =>
+                    runFormat(field.key, (v, s, e) =>
+                      prefixLines(v, s, e, "## "),
+                    )
+                  }
+                />
                 <FormatButton
                   label={<strong>B</strong>}
                   title="Bold"
@@ -338,52 +441,7 @@ export function LiveDocEditor({
                   }
                 />
                 <FormatButton
-                  label="H"
-                  title="Heading"
-                  onClick={() =>
-                    runFormat(field.key, (v, s, e) =>
-                      prefixLines(v, s, e, "## "),
-                    )
-                  }
-                />
-                <FormatButton
-                  label="• List"
-                  title="Bullet list"
-                  onClick={() =>
-                    runFormat(field.key, (v, s, e) =>
-                      prefixLines(v, s, e, "- "),
-                    )
-                  }
-                />
-                <FormatButton
-                  label="1. List"
-                  title="Numbered list"
-                  onClick={() =>
-                    runFormat(field.key, (v, s, e) =>
-                      prefixLines(v, s, e, "1. "),
-                    )
-                  }
-                />
-                <FormatButton
-                  label="Link"
-                  title="Link"
-                  onClick={() =>
-                    runFormat(field.key, (v, s, e) => {
-                      const selected = v.slice(s, e) || "label";
-                      const next =
-                        v.slice(0, s) +
-                        `[${selected}](https://)` +
-                        v.slice(e);
-                      return {
-                        value: next,
-                        selectionStart: s + selected.length + 3,
-                        selectionEnd: s + selected.length + 3 + 8,
-                      };
-                    })
-                  }
-                />
-                <FormatButton
-                  label="Quote"
+                  label={'" "'}
                   title="Quote"
                   onClick={() =>
                     runFormat(field.key, (v, s, e) =>
@@ -391,6 +449,31 @@ export function LiveDocEditor({
                     )
                   }
                 />
+                <FormatButton
+                  label="•"
+                  title="Bullet list"
+                  onClick={() =>
+                    runFormat(field.key, (v, s, e) =>
+                      prefixLines(v, s, e, "- "),
+                    )
+                  }
+                />
+                <span className="mx-1 h-4 w-px bg-[var(--line)]" />
+                <button
+                  type="button"
+                  onClick={() => openLinkPicker(field.key)}
+                  className={`rounded-[var(--radius-md)] border px-2.5 py-1 text-[12px] transition ${
+                    linkPressed && linkField === field.key
+                      ? "border-accent bg-[var(--accent-tint-16)] text-accent"
+                      : "border-[rgba(225,173,102,0.5)] text-accent hover:bg-[var(--accent-tint-11)]"
+                  }`}
+                >
+                  Link a card{" "}
+                  <span className="text-muted">&lt;l/&gt;</span>
+                </button>
+                <span className="ml-auto text-[10px] text-muted-2">
+                  markdown ok
+                </span>
               </div>
               <textarea
                 ref={(node) => {
@@ -398,14 +481,31 @@ export function LiveDocEditor({
                 }}
                 value={value}
                 rows={field.rows ?? 10}
-                onChange={(event) => updateField(field.key, event.target.value)}
+                onChange={(event) =>
+                  onMarkdownChange(
+                    field.key,
+                    event.target.value,
+                    event.target.selectionStart,
+                  )
+                }
                 onBlur={() => {
                   if (dirtyRef.current) void flushSave(true);
                 }}
-                className="mt-1.5 w-full resize-y rounded-lg border border-line bg-paper-deep/40 px-3 py-2 text-ink outline-none transition focus:border-accent focus:bg-paper"
+                className="mt-1.5 w-full resize-y rounded-[var(--radius-md)] border border-line-strong bg-transparent px-3 py-2 text-[14.5px] leading-[1.85] text-text-2 outline-none transition focus:border-accent"
+              />
+              <LinkPicker
+                campaignId={campaignId}
+                open={linkField === field.key}
+                initialQuery={linkQuery}
+                showInsertStyles
+                onClose={() => {
+                  setLinkField(null);
+                  setLinkPressed(false);
+                }}
+                onInsert={insertCampaignLink}
               />
               <span className="mt-1 block text-[11px] text-ink-soft">
-                Autosaves after you pause typing · blur also saves
+                Type &lt;l/&gt; or use Link a card · autosaves after you pause
               </span>
             </label>
           );
@@ -435,7 +535,7 @@ export function LiveDocEditor({
           dirtyRef.current = true;
           void flushSave(true);
         }}
-        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-paper hover:bg-accent-deep disabled:opacity-50"
+        className="rounded-[var(--radius-md)] border border-[rgba(225,173,102,0.5)] px-4 py-2 text-[12.5px] text-accent transition hover:bg-[var(--accent-tint-11)] disabled:opacity-50"
       >
         {saveState === "saving" ? "Saving…" : "Save now"}
       </button>

@@ -13,6 +13,7 @@ import {
   mapMarkers,
 } from "./schema";
 import { requireCampaignMember } from "./session";
+import { indexEntityDoc, indexMapDoc, removeSearchDoc } from "./search";
 import { saveCampaignUpload } from "./uploads";
 
 function formString(formData: FormData, key: string) {
@@ -125,6 +126,7 @@ export async function createEntityAction(
     .orderBy(desc(gameSessions.sortOrder), desc(gameSessions.createdAt))
     .limit(1);
 
+  const sortOrder = (maxRow?.value ?? -1) + 1;
   await db.insert(entities).values({
     id,
     campaignId,
@@ -136,9 +138,19 @@ export async function createEntityAction(
     itemsOfInterest,
     imagePath,
     riverSessionId: latestSession?.id ?? null,
-    sortOrder: (maxRow?.value ?? -1) + 1,
+    sortOrder,
     createdBy: session.user.id,
     updatedBy: session.user.id,
+  });
+  indexEntityDoc({
+    id,
+    campaignId,
+    type,
+    name,
+    role,
+    allegiance,
+    description,
+    itemsOfInterest,
   });
 
   redirect(`/campaigns/${campaignId}/entities/${id}`);
@@ -325,6 +337,7 @@ export async function createMapAction(campaignId: string, formData: FormData) {
     imagePath,
     createdBy: session.user.id,
   });
+  indexMapDoc({ id, campaignId, name });
 
   redirect(`/campaigns/${campaignId}/maps/${id}`);
 }

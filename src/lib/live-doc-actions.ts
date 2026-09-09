@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { entities, gameSessions } from "@/lib/schema";
 import { user } from "@/lib/auth-schema";
+import { indexEntityDoc, indexSessionDoc } from "@/lib/search";
 import { requireCampaignMember } from "@/lib/session";
 
 export type LiveDocType = "session" | "entity";
@@ -247,6 +248,13 @@ export async function patchLiveDocAction(input: {
         ),
       );
 
+    const [row] = await db
+      .select()
+      .from(gameSessions)
+      .where(eq(gameSessions.id, input.docId))
+      .limit(1);
+    if (row) indexSessionDoc(row);
+
     // Avoid revalidating the open editor page — that remounts the client and drops keystrokes.
     revalidatePath(`/campaigns/${input.campaignId}`);
     revalidatePath(`/campaigns/${input.campaignId}/fate`);
@@ -295,6 +303,13 @@ export async function patchLiveDocAction(input: {
         eq(entities.campaignId, input.campaignId),
       ),
     );
+
+  const [entityRow] = await db
+    .select()
+    .from(entities)
+    .where(eq(entities.id, input.docId))
+    .limit(1);
+  if (entityRow) indexEntityDoc(entityRow);
 
   revalidatePath(`/campaigns/${input.campaignId}/entities`);
   revalidatePath(`/campaigns/${input.campaignId}/fate`);

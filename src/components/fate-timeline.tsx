@@ -241,10 +241,10 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
     <div className="w-full space-y-4 pb-10">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-end justify-between gap-3 px-6">
         <div>
-          <h2 className="font-[family-name:var(--font-display)] text-3xl tracking-tight text-ink">
-            Thread of fate
+          <h2 className="font-[family-name:var(--font-heading)] text-[28px] font-normal tracking-tight text-text">
+            Fate river
           </h2>
-          <p className="mt-1 max-w-2xl text-sm text-ink-soft">
+          <p className="mt-1 max-w-2xl text-sm text-text-3">
             Click a session to zoom in, then open it from the card. Click
             anywhere else on the river to zoom out. Drag to travel; use ← → to
             reorder.
@@ -253,15 +253,45 @@ export function FateTimeline({ campaignId, sessions, placements }: Props) {
             <p className="mt-2 text-xs text-warn">{actionMessage}</p>
           ) : null}
         </div>
-        {zoomedSessionId ? (
-          <button
-            type="button"
-            onClick={() => setZoomedSessionId(null)}
-            className="rounded-lg border border-line bg-paper/70 px-4 py-2 text-sm hover:border-accent"
-          >
-            Zoom out
-          </button>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 text-[12.5px] text-text-3">
+            Jump to
+            <select
+              className="rounded-[var(--radius-md)] border border-line-strong bg-surface px-2 py-1.5 text-[12.5px] text-text"
+              defaultValue=""
+              onChange={(event) => {
+                const id = event.target.value;
+                if (!id) return;
+                const index = sessions.findIndex((s) => s.id === id);
+                if (index < 0) return;
+                const node = scrollerRef.current;
+                if (!node) return;
+                node.scrollTo({
+                  left: Math.max(0, PAD_X + index * SESSION_GAP - 200),
+                  behavior: "smooth",
+                });
+                setZoomedSessionId(id);
+                event.target.value = "";
+              }}
+            >
+              <option value="">Session…</option>
+              {sessions.map((session, index) => (
+                <option key={session.id} value={session.id}>
+                  S{index + 1} · {session.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          {zoomedSessionId ? (
+            <button
+              type="button"
+              onClick={() => setZoomedSessionId(null)}
+              className="rounded-[var(--radius-md)] border border-line px-4 py-2 text-[12.5px] text-text-3 hover:border-accent-line hover:text-accent"
+            >
+              Zoom out
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="relative w-full overflow-hidden border-y-[6px] border-[#c49a55]/70 bg-[#070504] shadow-[0_22px_55px_-34px_rgba(20,32,28,0.55),inset_0_1px_0_rgba(255,220,160,0.28),inset_0_-1px_0_rgba(255,220,160,0.28)]">

@@ -49,3 +49,29 @@ export async function saveCampaignUpload(
 
   return relativePath.split(path.sep).join("/");
 }
+
+export async function saveRulebookUpload(file: File) {
+  const name = file.name.toLowerCase();
+  const isMd =
+    name.endsWith(".md") ||
+    name.endsWith(".markdown") ||
+    file.type === "text/markdown" ||
+    file.type === "text/plain";
+  const isPdf =
+    name.endsWith(".pdf") || file.type === "application/pdf";
+
+  if (!isMd && !isPdf) {
+    throw new Error("Only Markdown (.md) or PDF files are allowed.");
+  }
+  if (file.size > 20 * 1024 * 1024) {
+    throw new Error("Rulebook files must be 20MB or smaller.");
+  }
+
+  const ext = isPdf ? "pdf" : "md";
+  const filename = `rulebook_${createId()}.${ext}`;
+  const relativePath = path.join("rulebooks", filename);
+  const absolutePath = path.join(getUploadRoot(), relativePath);
+  await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+  await fs.writeFile(absolutePath, Buffer.from(await file.arrayBuffer()));
+  return relativePath.split(path.sep).join("/");
+}

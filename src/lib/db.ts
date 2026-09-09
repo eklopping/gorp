@@ -72,6 +72,71 @@ function ensureRuntimeSchema() {
   }
 }
 
-ensureRuntimeSchema();
+function ensureSearchAndRulebookSchema() {
+  try {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS rulebooks (
+        id TEXT PRIMARY KEY NOT NULL,
+        title TEXT NOT NULL,
+        version TEXT NOT NULL DEFAULT '',
+        source_type TEXT NOT NULL,
+        source_path TEXT,
+        imported_at INTEGER,
+        imported_by TEXT REFERENCES user(id)
+      );
 
+      CREATE TABLE IF NOT EXISTS rulebook_sections (
+        id TEXT PRIMARY KEY NOT NULL,
+        rulebook_id TEXT NOT NULL REFERENCES rulebooks(id) ON DELETE CASCADE,
+        number TEXT NOT NULL,
+        title TEXT NOT NULL,
+        chapter_number TEXT NOT NULL,
+        chapter_title TEXT NOT NULL,
+        body TEXT NOT NULL DEFAULT '',
+        sort_order INTEGER NOT NULL DEFAULT 0
+      );
+
+      CREATE TABLE IF NOT EXISTS rule_citations (
+        id TEXT PRIMARY KEY NOT NULL,
+        section_id TEXT NOT NULL REFERENCES rulebook_sections(id) ON DELETE CASCADE,
+        campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+        game_session_id TEXT REFERENCES game_sessions(id) ON DELETE CASCADE,
+        entity_id TEXT REFERENCES entities(id) ON DELETE CASCADE,
+        excerpt TEXT NOT NULL DEFAULT ''
+      );
+
+      CREATE TABLE IF NOT EXISTS rulebook_bookmarks (
+        id TEXT PRIMARY KEY NOT NULL,
+        section_id TEXT NOT NULL REFERENCES rulebook_sections(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS rulebook_quick_refs (
+        id TEXT PRIMARY KEY NOT NULL,
+        rulebook_id TEXT NOT NULL REFERENCES rulebooks(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        summary TEXT NOT NULL DEFAULT '',
+        sort_order INTEGER NOT NULL DEFAULT 0
+      );
+
+      CREATE VIRTUAL TABLE IF NOT EXISTS search_docs USING fts5(
+        doc_id UNINDEXED,
+        campaign_id UNINDEXED,
+        doc_type UNINDEXED,
+        title,
+        body,
+        href UNINDEXED,
+        tag UNINDEXED,
+        tokenize = 'porter unicode61'
+      );
+    `);
+  } catch {
+    // Fresh DBs / race on first boot.
+  }
+}
+
+ensureRuntimeSchema();
+ensureSearchAndRulebookSchema();
+
+export const sqliteDb = sqlite;
 export const db = drizzle(sqlite, { schema });
